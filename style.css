@@ -146,6 +146,10 @@ header { margin-bottom: 25px; }
     font-size: 0.95rem;
     text-transform: uppercase;
     letter-spacing: 2px;
+    /* --- NOUVEAU --- */
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 .xp-percentage {
     color: #4ade80;
@@ -409,6 +413,18 @@ th:nth-child(5), td:nth-child(5) { width: 15%; }
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    /* --- FIX BARRE XP SUR MOBILE --- */
+    .xp-title {
+        flex-direction: column;    /* Empile les lignes */
+        align-items: flex-start;   /* Aligne bien à gauche */
+        gap: 4px;                  /* Petit espace entre les deux */
+        font-size: 0.8rem;         /* Police légèrement plus petite pour que ça respire */
+    }
+    
+    .xp-arrow {
+        display: none;             /* On cache la flèche "➔" sur mobile */
+    }
 }
 
 /* --- 9. ANIMATIONS 3D --- */
@@ -565,3 +581,75 @@ select option {
     }
 }
 
+/* --- LE PANTHÉON DES RECORDS (Version Mini-Cartes) --- */
+.records-grid {
+    display: grid;
+    /* On permet aux cartes d'être plus petites */
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px; /* Moins d'espace entre les cartes */
+    margin-bottom: 20px; /* Moins d'espace sous le bloc */
+}
+
+.record-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    /* BEAUCOUP moins de padding interne */
+    padding: 10px 12px;
+    border-radius: 8px; /* Angles un peu moins arrondis pour le côté "mini" */
+    background: linear-gradient(145deg, rgba(30, 30, 30, 0.9), rgba(15, 15, 15, 0.9));
+    border: 1px solid #2a2a2a; /* Bordure plus discrète */
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.record-card:hover { transform: translateY(-2px); }
+
+/* Barre de couleur plus fine en haut (2px au lieu de 3px) */
+.best-record { border-top: 2px solid #4ade80; }
+.worst-record { border-top: 2px solid #ff5555; }
+
+.record-icon {
+    /* Icône beaucoup plus petite */
+    font-size: 1.4rem; 
+    margin-right: 0;
+    margin-bottom: 4px; /* Moins d'espace sous l'icône */
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+    opacity: 0.9; /* Légèrement transparent pour être moins agressif */
+}
+
+.record-info { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center;
+    width: 100%;
+}
+
+.record-info small {
+    font-size: 0.65rem; /* Titre plus petit */
+    text-transform: uppercase;
+    color: #888; /* Gris plus foncé pour être moins visible */
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.record-value {
+    font-size: 1.1rem; /* Montant réduit (était 1.4rem) */
+    font-weight: 700;
+    margin-bottom: 0px;
+    line-height: 1.2;
+}
+
+.best-record .record-value { color: #4ade80; text-shadow: 0 0 8px rgba(74, 222, 128, 0.2); }
+.worst-record .record-value { color: #ff5555; text-shadow: 0 0 8px rgba(255, 85, 85, 0.2); }
+
+.record-date {
+    font-size: 0.65rem; /* Date plus petite */
+    color: #666; /* Date très discrète */
+    font-weight: 400;
+    margin-top: 2px;
+}

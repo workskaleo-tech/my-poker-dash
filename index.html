@@ -4,12 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Poker Tracker NL10</title>
+    
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
+    
     <script>
-    // Force le navigateur à toujours télécharger le tout dernier CSS (Anti-Cache Automatique)
-    document.write('<link rel="stylesheet" href="style.css?t=' + new Date().getTime() + '">');
-</script>
+        // Force le navigateur à toujours télécharger le tout dernier CSS
+        document.write('<link rel="stylesheet" href="style.css?t=' + new Date().getTime() + '">');
+    </script>
 </head>
 <body>
     <canvas id="bg-canvas"></canvas>
@@ -50,6 +55,25 @@
                 </div>
             </div>
 
+            <div class="records-grid">
+                <div class="record-card best-record">
+                    <div class="record-icon">🔥</div>
+                    <div class="record-info">
+                        <small>Plus Gros Braquage</small>
+                        <div class="record-value" id="best-session-gain">0.00€</div>
+                        <div class="record-date" id="best-session-date">--/--</div>
+                    </div>
+                </div>
+                <div class="record-card worst-record">
+                    <div class="record-icon">🥶</div>
+                    <div class="record-info">
+                        <small>Pire Bad Beat</small>
+                        <div class="record-value" id="worst-session-gain">0.00€</div>
+                        <div class="record-date" id="worst-session-date">--/--</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="xp-bar-wrapper">
                 <div class="xp-bar-header">
     <span class="xp-title" id="xp-title-text">🎯 Objectif 1000€</span>
@@ -62,7 +86,12 @@
         </header>
 
         <main>
-            <div class="chart-container">
+            <div class="chart-container" style="position: relative;">
+                <button onclick="if(window.pokerChart) window.pokerChart.resetZoom()" title="Recadrer le graphique" style="position: absolute; top: 10px; right: 10px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); color: #60a5fa; width: 28px; height: 28px; padding: 0; border-radius: 6px; cursor: pointer; z-index: 10; transition: all 0.2s; display: flex; align-items: center; justify-content: center;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                    </svg>
+                </button>
                 <canvas id="myChart"></canvas>
             </div>
         </main>

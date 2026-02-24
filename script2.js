@@ -101,7 +101,7 @@ function updateUI() {
 
     const xpTitle = document.getElementById('xp-title-text');
     if(xpTitle) {
-        xpTitle.innerText = `🏁 Départ ${startBR}€ ➔ 🎯 Objectif ${goalBR}€`;
+        xpTitle.innerHTML = `<span class="xp-start">🏁 Départ ${startBR}€</span> <span class="xp-arrow">➔</span> <span class="xp-goal">🎯 Objectif ${goalBR}€</span>`;
     }
 
     let filteredSessions = sessions.filter(s => {
@@ -114,6 +114,10 @@ function updateUI() {
     let totalHands = 0; let currentProfitNet = 0; let winningSessions = 0;
     let totalBB = 0; 
     
+    // VARIABLES DU PANTHÉON
+    let bestGain = -Infinity, worstGain = Infinity;
+    let bestSession = null, worstSession = null;
+
     const historyBody = document.getElementById('history-list');
     const user = auth.currentUser;
     const isAntoine = user && user.email === ADMIN_EMAIL;
@@ -124,6 +128,10 @@ function updateUI() {
         currentProfitNet += s.gain;
         if (s.gain > 0) winningSessions++;
         
+        // RECHERCHE DES RECORDS
+        if (s.gain > bestGain) { bestGain = s.gain; bestSession = s; }
+        if (s.gain < worstGain) { worstGain = s.gain; worstSession = s; }
+
         handsLabels.push(totalHands);
         profitsNet.push(parseFloat(currentProfitNet.toFixed(2)));
 
@@ -144,6 +152,24 @@ function updateUI() {
     });
 
     if(historyBody) historyBody.innerHTML = rows.reverse().join('');
+
+    // MISE À JOUR VISUELLE DU PANTHÉON
+    const bestGainElem = document.getElementById('best-session-gain');
+    const bestDateElem = document.getElementById('best-session-date');
+    const worstGainElem = document.getElementById('worst-session-gain');
+    const worstDateElem = document.getElementById('worst-session-date');
+
+    if (filteredSessions.length > 0 && bestSession && worstSession) {
+        if (bestGainElem) bestGainElem.innerText = `+${bestSession.gain.toFixed(2)}€`;
+        if (bestDateElem) bestDateElem.innerText = `le ${bestSession.date} (${bestSession.stake || "NL10"})`;
+        if (worstGainElem) worstGainElem.innerText = `${worstSession.gain.toFixed(2)}€`;
+        if (worstDateElem) worstDateElem.innerText = `le ${worstSession.date} (${worstSession.stake || "NL10"})`;
+    } else {
+        if (bestGainElem) bestGainElem.innerText = "0.00€";
+        if (bestDateElem) bestDateElem.innerText = "--/--";
+        if (worstGainElem) worstGainElem.innerText = "0.00€";
+        if (worstDateElem) worstDateElem.innerText = "--/--";
+    }
 
     const brElem = document.getElementById('total-br');
     if(brElem) {
@@ -180,30 +206,66 @@ function renderChart(labels, values) {
     const canvas = document.getElementById('myChart');
     if(!canvas) return;
     const ctx = canvas.getContext('2d');
+    
+    // (On a supprimé le calcul manuel de minProfit ici)
+
     if (window.pokerChart) window.pokerChart.destroy();
     window.pokerChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-    label: 'Profit Net',
-    data: values,
-    pointRadius: 0,           // 🛑 Supprime les points (les petits ronds)
-    pointHoverRadius: 5,      // Les fait réapparaître uniquement au survol
-    borderWidth: 3,           // Une ligne légèrement plus fine est plus élégante
-    borderColor: '#60a5fa',
-    fill: 'start',
-    backgroundColor: 'rgba(59, 130, 246, 0.05)', // Un dégradé très léger
-    tension: 0.2              // Un peu moins de lissage pour plus de précision
-}]
+                label: 'Profit Net',
+                data: values,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                borderWidth: 3,
+                borderColor: '#60a5fa',
+                fill: 'start',
+                backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                tension: 0.2
+            }]
         },
         options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-                y: { grid: { color: 'rgba(59, 130, 246, 0.1)' }, ticks: { color: '#9ca3af' } },
-                x: { type: 'linear', grid: { display: false }, min: labels[0], max: labels[labels.length - 1], ticks: { color: '#9ca3af' } }
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: { left: 0, right: 0, top: 10, bottom: 5 }
             },
-            plugins: { legend: { display: false } }
+            scales: {
+                y: { 
+                    suggestedMin: 0, 
+                    grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
+                    ticks: { color: '#9ca3af' } 
+                },
+                x: { 
+                    type: 'linear', 
+                    bounds: 'tight', 
+                    grid: { display: false }, 
+                    min: labels[0], 
+                    max: labels[labels.length - 1], 
+                    ticks: { color: '#9ca3af' } 
+                }
+            },
+          // 👇 LE ZOOM EST AJOUTÉ PROPREMENT ICI 👇
+            plugins: { 
+                legend: { display: false },
+                zoom: {
+                    // 🛑 ON AJOUTE LES MURS ICI : Impossible de dézoomer plus que la vue de base
+                    limits: {
+                        x: { min: 'original', max: 'original' }
+                    },
+                    pan: {
+                        enabled: true,
+                        mode: 'x'
+                    },
+                    zoom: {
+                        wheel: { enabled: true },
+                        pinch: { enabled: true },
+                        mode: 'x'
+                    }
+                }
+            }
         }
     });
 }
