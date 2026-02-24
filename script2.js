@@ -186,12 +186,16 @@ function renderChart(labels, values) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Profit Net',
-                data: values,
-                clip: false, borderColor: '#60a5fa', borderWidth: 3,
-                pointBackgroundColor: '#ffffff', pointBorderColor: '#3b82f6', pointBorderWidth: 2, pointRadius: 5,
-                fill: 'start', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.4
-            }]
+    label: 'Profit Net',
+    data: values,
+    pointRadius: 0,           // 🛑 Supprime les points (les petits ronds)
+    pointHoverRadius: 5,      // Les fait réapparaître uniquement au survol
+    borderWidth: 3,           // Une ligne légèrement plus fine est plus élégante
+    borderColor: '#60a5fa',
+    fill: 'start',
+    backgroundColor: 'rgba(59, 130, 246, 0.05)', // Un dégradé très léger
+    tension: 0.2              // Un peu moins de lissage pour plus de précision
+}]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
