@@ -201,14 +201,142 @@ function updateUI() {
     renderCalendar(filteredSessions); 
 }
 
-// --- 6. CHART ET AUDIO ---
+// --- 6. CHART ET AUDIO (AVEC EFFET NÉON AFFINÉ ET INTENSE - TECHNIQUE SABRE LASER) ---
+
+// 🛑 A. DÉFINITION DU PLUGIN NÉON SABRE LASER (Unique à ajouter avant la fonction renderChart)
+const neonLinePlugin = {
+    id: 'neonLine',
+    defaults: { 
+        // 👈 La couleur de base du néon (Bleu intense)
+        neonColor: '#00aaff', 
+        // 👈 La couleur du cœur (Très pâle/blanc) pour simuler l'intensité
+        coreColor: '#ccffff', 
+        ballColor: '#ffffff', // Cœur blanc boule
+        speed: 2500 // Vitesse d'animation : 2.5 secondes
+    },
+    
+    afterDatasetsDraw(chart, args, options) {
+        const { ctx, scales: { x, y } } = chart;
+        const datasetMeta = chart.getDatasetMeta(0);
+        const points = datasetMeta.data;
+
+        // Sécurité : On ne dessine que s'il y a des données et si l'animation a commencé
+        if (!points || points.length < 2 || chart.neonProgress === undefined) return;
+
+        ctx.save();
+
+        // 🛑 B. CALCUL DU PARCOURS ANIME
+        const totalDuration = options.speed; // Durée totale de l'animation en ms
+        const elapsed = Date.now() - chart.neonStartTime;
+        const progress = Math.min(elapsed / totalDuration, 1); // Progression de 0 à 1
+        
+        const endIndex = (points.length - 1) * progress;
+        const integerEndIndex = Math.floor(endIndex);
+        const factionalEndIndex = endIndex - integerEndIndex;
+
+        // --- C. DÉFINITION DU TRACÉ (Path) ---
+        // On crée un tracé pour le sabre laser qu'on va réutiliser pour chaque couche de lumière
+        ctx.beginPath();
+        for (let i = 0; i <= integerEndIndex; i++) {
+            const point = points[i];
+            if (i === 0) ctx.moveTo(point.x, point.y);
+            else ctx.lineTo(point.x, point.y);
+        }
+        
+        // Dessine la partie fractionnaire finale pour que ce soit fluide
+        if (integerEndIndex < points.length - 1) {
+            const p1 = points[integerEndIndex];
+            const p2 = points[integerEndIndex + 1];
+            const finalX = p1.x + (p2.x - p1.x) * factionalEndIndex;
+            const finalY = p1.y + (p2.y - p1.y) * factionalEndIndex;
+            ctx.lineTo(finalX, finalY);
+        }
+
+        // On retient ce tracé pour l'appliquer à toutes les couches de dessin
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // --- D. L'EFFET NÉON PAR EMPILEMENT DE LUEURS (LA TECHNIQUE DU SABRE LASER) ---
+
+        // Couche 1 : Lueure diffuse ultra-large (Halo le plus externe)
+        ctx.lineWidth = 20; // Très large
+        ctx.strokeStyle = 'rgba(0, 150, 255, 0.08)'; // Très transparent
+        ctx.shadowColor = options.neonColor; // Bleu pur
+        ctx.shadowBlur = 40; // Flou gigantesque
+        ctx.stroke();
+
+        // Couche 2 : Lueure moyenne (Halo principal)
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = 'rgba(0, 150, 255, 0.2)'; 
+        ctx.shadowBlur = 20; 
+        ctx.stroke();
+
+        // Couche 3 : Cœur de lueure concentrée (Intensity)
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = 'rgba(200, 240, 255, 0.4)'; 
+        ctx.shadowBlur = 10; 
+        ctx.stroke();
+
+        // Couche 4 : 🛑 LE CŒUR BLANC INTENSE ET FIN (AFFINER ET INTENSIFIER ICI)
+        ctx.lineWidth = 1.0; // 👈 🛑 ULTRA FIN pour la précision
+        ctx.strokeStyle = options.coreColor; // 👈 🛑 TRÈS CLAIR (presque blanc) pour la brillance pure
+        ctx.shadowBlur = 3; // Lueure intime juste autour
+        ctx.stroke();
+
+        // --- E. DESSIN DE LA BOULE DE LUMIÈRE (Renforcée) ---
+        if (points.length > 0) {
+            // Calcule la position exacte de la boule au bout du parcours
+            let ballX, ballY;
+            if (integerEndIndex < points.length - 1) {
+                const p1 = points[integerEndIndex];
+                const p2 = points[integerEndIndex + 1];
+                ballX = p1.x + (p2.x - p1.x) * factionalEndIndex;
+                ballY = p1.y + (p2.y - p1.y) * factionalEndIndex;
+            } else {
+                const last = points[points.length - 1];
+                ballX = last.x;
+                ballY = last.y;
+            }
+
+            // Halo lumineux externe (Bleu intense)
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, 18, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 100, 255, 0.1)'; // Halo doux
+            ctx.fill();
+
+            // Halo concentré (Intensity)
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, 10, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(100, 240, 255, 0.3)'; 
+            ctx.fill();
+
+            // Cœur brillant (Blanc pur intense - comme l'original)
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, 6.5, 0, Math.PI * 2);
+            ctx.fillStyle = options.ballColor; // Blanc pur
+            ctx.shadowColor = '#ccffff'; // Halo brillant très clair autour
+            ctx.shadowBlur = 25; // Explosion de lumière
+            ctx.fill();
+        }
+
+        ctx.restore();
+
+        // 🛑 F. BOUCLE D'ANIMATION (Demande de re-dessiner le cadre suivant si pas fini)
+        if (progress < 1) {
+            requestAnimationFrame(() => chart.draw()); 
+        }
+    }
+};
+
+// 🛑 G. FONCTION RENDERCHART MODIFIÉE POUR CACHER L'ANCIENNE LIGNE
 function renderChart(labels, values) {
     const canvas = document.getElementById('myChart');
     if(!canvas) return;
     const ctx = canvas.getContext('2d');
     
     if (window.pokerChart) window.pokerChart.destroy();
-    window.pokerChart = new Chart(ctx, {
+    
+    const chartConfig = {
         type: 'line',
         data: {
             labels: labels,
@@ -217,8 +345,9 @@ function renderChart(labels, values) {
                 data: values,
                 pointRadius: 0,
                 pointHoverRadius: 5,
-                borderWidth: 3,
-                borderColor: '#60a5fa',
+                // 🛑 CHANGEMENT MAJEUR ICI 🛑
+                borderWidth: 0, // 👈 🛑 ON CACHE COMPLÈTEMENT LA LIGNE BLEUE EPAISSE DU GRAPHIQUE
+                borderColor: 'rgba(0,0,0,0)', // 👈 Ligne 100% transparente
                 fill: 'start',
                 backgroundColor: 'rgba(59, 130, 246, 0.05)',
                 tension: 0.2
@@ -245,8 +374,16 @@ function renderChart(labels, values) {
                     ticks: { color: '#9ca3af' } 
                 }
             },
+            // 🛑 H. CONFIGURATION DU PLUGIN NÉON SABRE LASER
             plugins: { 
                 legend: { display: false },
+                // Active le plugin personnalisé
+                neonLine: {
+                    neonColor: '#3b82f6', // 👈 Vrai bleu du thème
+                    coreColor: '#eff6ff', // 👈 Blanc bleuté
+                    ballColor: '#ffffff', 
+                    speed: 2000 
+                },
                 zoom: {
                     limits: {
                         x: { min: 'original', max: 'original' }
@@ -262,8 +399,20 @@ function renderChart(labels, values) {
                     }
                 }
             }
-        }
-    });
+        },
+        // Enregistre le plugin pour ce graphique précis
+        plugins: [neonLinePlugin]
+    };
+
+    // Création du chart
+    window.pokerChart = new Chart(ctx, chartConfig);
+    
+    // 🛑 I. DÉMARRAGE DE L'ANIMATION LORSQUE LE CHART S'AFFICHE
+    if (labels.length > 1) {
+        window.pokerChart.neonProgress = 0; // Point de départ
+        window.pokerChart.neonStartTime = Date.now(); // Temps de départ
+        window.pokerChart.draw(); // Force le premier dessin pour lancer la boucle d'animation
+    }
 }
 
 function animateValue(id, start, end, duration) {
