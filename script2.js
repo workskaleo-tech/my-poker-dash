@@ -75,6 +75,7 @@ function addSession() {
     }).then(() => {
         if(typeof playPop === "function") playPop();
         handsInput.value = ''; gainInput.value = '';
+        setTodayDate(); // 👈 Remet l'horloge à jour pour la prochaine session !
     });
 }
 
@@ -114,7 +115,6 @@ function updateUI() {
     let totalHands = 0; let currentProfitNet = 0; let winningSessions = 0;
     let totalBB = 0; 
     
-    // VARIABLES DU PANTHÉON
     let bestGain = -Infinity, worstGain = Infinity;
     let bestSession = null, worstSession = null;
 
@@ -128,7 +128,6 @@ function updateUI() {
         currentProfitNet += s.gain;
         if (s.gain > 0) winningSessions++;
         
-        // RECHERCHE DES RECORDS
         if (s.gain > bestGain) { bestGain = s.gain; bestSession = s; }
         if (s.gain < worstGain) { worstGain = s.gain; worstSession = s; }
 
@@ -153,7 +152,6 @@ function updateUI() {
 
     if(historyBody) historyBody.innerHTML = rows.reverse().join('');
 
-    // MISE À JOUR VISUELLE DU PANTHÉON
     const bestGainElem = document.getElementById('best-session-gain');
     const bestDateElem = document.getElementById('best-session-date');
     const worstGainElem = document.getElementById('worst-session-gain');
@@ -198,7 +196,9 @@ function updateUI() {
     document.getElementById('br-progression-text').innerText = displayProg.toFixed(1) + "%";
     document.getElementById('progress-bar-fill').style.width = displayProg + "%";
 
+    // 🛑 APPEL DES DEUX FONCTIONS ICI
     renderChart(handsLabels, profitsNet);
+    renderCalendar(filteredSessions); 
 }
 
 // --- 6. CHART ET AUDIO ---
@@ -207,8 +207,6 @@ function renderChart(labels, values) {
     if(!canvas) return;
     const ctx = canvas.getContext('2d');
     
-    // (On a supprimé le calcul manuel de minProfit ici)
-
     if (window.pokerChart) window.pokerChart.destroy();
     window.pokerChart = new Chart(ctx, {
         type: 'line',
@@ -227,7 +225,7 @@ function renderChart(labels, values) {
             }]
         },
         options: {
-            responsive: true,
+            responsive: true, 
             maintainAspectRatio: false,
             layout: {
                 padding: { left: 0, right: 0, top: 10, bottom: 5 }
@@ -247,11 +245,9 @@ function renderChart(labels, values) {
                     ticks: { color: '#9ca3af' } 
                 }
             },
-          // 👇 LE ZOOM EST AJOUTÉ PROPREMENT ICI 👇
             plugins: { 
                 legend: { display: false },
                 zoom: {
-                    // 🛑 ON AJOUTE LES MURS ICI : Impossible de dézoomer plus que la vue de base
                     limits: {
                         x: { min: 'original', max: 'original' }
                     },
@@ -289,7 +285,7 @@ function resetData() {
     }
 }
 
-// --- 7. ANIMATIONS DE FOND (ÉTOILES, FUMÉE, BOULES DE FEU) ---
+// --- 7. ANIMATIONS DE FOND ---
 const bgCanvas = document.getElementById('bg-canvas');
 if (bgCanvas) {
     const bgCtx = bgCanvas.getContext('2d');
@@ -334,7 +330,6 @@ if (bgCanvas) {
     function animateBg() {
         bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
         
-        // Étoiles de fond
         bgCtx.fillStyle = "rgba(59, 130, 246, 0.2)";
         stars.forEach(p => {
             p.x += p.sx; p.y += p.sy;
@@ -342,7 +337,6 @@ if (bgCanvas) {
             bgCtx.beginPath(); bgCtx.arc(p.x, p.y, 2, 0, Math.PI * 2); bgCtx.fill();
         });
 
-        // Fumée de souris
         for (let i = 0; i < smokeTrail.length; i++) {
             let s = smokeTrail[i]; s.x += s.speedX; s.y += s.speedY; s.size += 0.6; s.opacity -= 0.012;
             if (s.opacity <= 0) { smokeTrail.splice(i, 1); i--; } 
@@ -355,7 +349,6 @@ if (bgCanvas) {
             }
         }
 
-        // Étoiles filantes
         shootingStarTimer++;
         if (shootingStarTimer > 800) { 
             createShootingStar();
@@ -376,7 +369,6 @@ if (bgCanvas) {
             if(s.y > bgCanvas.height) shootingStars.splice(idx, 1);
         });
 
-        // Boules de feu
         fireballTimer++;
         if (fireballTimer > Math.random() * 1000 + 500) { 
             createFireball();
@@ -511,8 +503,116 @@ function playPop() {
     osc.start(); osc.stop(audioCtx.currentTime + 0.05);
 }
 
-// Initialisation au démarrage
+// --- 9. CALENDRIER PNL (AXIOM STYLE) ---
+let currentCalDate = new Date(); // 👈 Nouvelle mémoire pour retenir le mois qu'on est en train de regarder
+
+function toggleHistoryFlip() {
+    const flipper = document.getElementById('history-flipper');
+    if (flipper) flipper.classList.toggle('is-flipped');
+}
+
+// 👈 Nouvelle fonction pour changer de mois !
+function changeCalMonth(offset) {
+    currentCalDate.setMonth(currentCalDate.getMonth() + offset);
+    updateUI(); // Recharge la page avec le nouveau mois
+}
+
+function renderCalendar(filteredSessions) {
+    const calContainer = document.getElementById('calendar-view');
+    if (!calContainer) return;
+
+    // 1. On regroupe tous les gains ET les limites par jour
+    const dailyData = {};
+    filteredSessions.forEach(s => {
+        if(!s.fullDate) return;
+        const dateStr = s.fullDate.split('T')[0]; 
+        
+        // On crée une petite mémoire pour chaque jour qui stocke le gain et les limites
+        if (!dailyData[dateStr]) dailyData[dateStr] = { gain: 0, stakes: new Set() };
+        
+        dailyData[dateStr].gain += s.gain;
+        dailyData[dateStr].stakes.add(s.stake || "NL10"); // Enregistre la limite jouée
+    });
+
+    // 2. On configure le mois affiché
+    const year = currentCalDate.getFullYear();
+    const month = currentCalDate.getMonth(); 
+
+    const firstDay = new Date(year, month, 1).getDay(); 
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startDay = firstDay === 0 ? 6 : firstDay - 1; 
+
+    const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+
+    // 3. On dessine la grille AVEC LES FLÈCHES DE NAVIGATION
+    let html = `
+    <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 10px 5px 10px;">
+        <button onclick="changeCalMonth(-1)" style="background: rgba(255,255,255,0.1); border: none; color: #fff; cursor: pointer; border-radius: 4px; padding: 4px 12px; font-size: 0.8rem; transition: 0.2s; display: flex; align-items: center; justify-content: center;">◀</button>
+        <span style="line-height: 1; transform: translateY(1px);">${monthNames[month]} ${year}</span>
+        <button onclick="changeCalMonth(1)" style="background: rgba(255,255,255,0.1); border: none; color: #fff; cursor: pointer; border-radius: 4px; padding: 4px 12px; font-size: 0.8rem; transition: 0.2s; display: flex; align-items: center; justify-content: center;">▶</button>
+    </div>`;
+    
+    html += `<div class="calendar-grid">`;
+    
+    ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].forEach(d => {
+        html += `<div class="cal-day-name">${d}</div>`;
+    });
+
+    for(let i = 0; i < startDay; i++) {
+        html += `<div class="cal-day empty"></div>`;
+    }
+
+    // 4. On remplit les cases du calendrier
+    for(let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const data = dailyData[dateStr];
+
+        let classes = "cal-day";
+        let content = `<span class="cal-date">${d}</span>`;
+
+        if (data !== undefined) {
+            const pnl = data.gain;
+            // On transforme la liste des limites en texte (ex: "NL10" ou "NL2 / NL10")
+            const stakesStr = Array.from(data.stakes).join(' / '); 
+
+            if (pnl > 0) classes += " win";
+            else if (pnl < 0) classes += " loss";
+            else classes += " even";
+
+            content += `<span class="cal-pnl">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</span>`;
+            
+            // 👈 L'étiquette bleue de la limite est ajoutée ici en haut à droite !
+            content += `<span style="position: absolute; top: 3px; right: 4px; font-size: 0.5rem; color: #60a5fa; font-weight: 700; letter-spacing: 0.5px;">${stakesStr}</span>`;
+        }
+
+        html += `<div class="${classes}">${content}</div>`;
+    }
+    html += `</div>`;
+
+    calContainer.innerHTML = html;
+}
+
+// --- 10. HORLOGE TEMPS RÉEL ---
 setTodayDate();
+
+// Met à jour l'heure automatiquement toutes les 30 secondes
+setInterval(() => {
+    const dateInput = document.getElementById('input-date');
+    const timeInput = document.getElementById('input-time');
+    // Sécurité : On ne met à jour QUE si tu n'es pas en train d'écrire dedans
+    if (document.activeElement !== dateInput && document.activeElement !== timeInput) {
+        setTodayDate();
+    }
+}, 30000);
+
+// Bonus : Met à l'heure instantanément quand tu reviens sur l'onglet (Alt+Tab)
+window.addEventListener('focus', () => {
+    const dateInput = document.getElementById('input-date');
+    const timeInput = document.getElementById('input-time');
+    if (document.activeElement !== dateInput && document.activeElement !== timeInput) {
+        setTodayDate();
+    }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     const bankrollCard = document.querySelector('.stat-card');

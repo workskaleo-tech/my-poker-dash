@@ -123,24 +123,41 @@
             <button class="btn-add" onclick="addSession()">Ajouter</button>
         </section>
 
-        <section class="history-section">
-            <h3>Historique des sessions</h3> <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Mains</th>
-                            <th>Gain (€)</th>
-                            <th>Gain (BB)</th> 
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-list"></tbody>
-                </table>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0;">Historique des sessions</h3>
+                <button onclick="toggleHistoryFlip()" title="Voir le calendrier PNL" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; border-radius: 6px; padding: 6px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: 'Montserrat'; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;">
+                    PNL Card
+                </button>
             </div>
-            <button class="btn-reset" onclick="resetData()">Réinitialiser le challenge</button>
-        </section>
 
+            <div class="flip-container">
+                <div class="flip-inner" id="history-flipper">
+                    
+                    <div class="flip-front">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Mains</th>
+                                        <th>Gain (€)</th>
+                                        <th>Gain (BB)</th> 
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-list"></tbody>
+                            </table>
+                        </div>
+                        <button class="btn-reset" onclick="resetData()">Réinitialiser le challenge</button>
+                    </div>
+
+                    <div class="flip-back">
+                        <div id="calendar-view"></div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
         <div class="share-actions">
             <button class="btn-secondary" onclick="exportData()">
                 <span class="icon">📤</span> Exporter
