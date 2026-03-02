@@ -658,10 +658,12 @@ select option {
 .flip-container {
     perspective: 1000px;
     width: 100%;
+    min-height: 460px; /* 👈 AJOUT ICI : Force le bloc à être assez grand */
 }
 .flip-inner {
     position: relative;
     width: 100%;
+    min-height: 460px; /* 👈 AJOUT ICI : Suit la taille du parent */
     transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
     transform-style: preserve-3d;
 }
@@ -697,6 +699,37 @@ select option {
 }
 .flip-back::-webkit-scrollbar-thumb:hover {
     background: #555; /* S'éclaire un peu au survol */
+}
+
+/* --- HAUTEUR FIXE ET SCROLL POUR L'HISTORIQUE STANDARD --- */
+.table-container {
+    max-height: 380px; /* 👈 Bloque la hauteur pour que ça fasse la même taille que le calendrier */
+    overflow-y: auto;  /* 👈 Active le défilement uniquement à l'intérieur du tableau */
+    margin-bottom: 15px;
+}
+
+/* Applique la même jolie scrollbar sombre qu'au calendrier */
+.table-container::-webkit-scrollbar {
+    width: 6px;
+}
+.table-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+.table-container::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 8px;
+}
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Petite astuce pour que l'en-tête du tableau reste toujours visible quand tu descends */
+.table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: rgba(20, 20, 20, 0.95); /* Garde le fond sombre pour masquer les lignes qui passent en dessous */
 }
 
 /* --- DESIGN DU CALENDRIER PNL --- */

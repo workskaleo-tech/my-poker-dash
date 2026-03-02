@@ -196,9 +196,9 @@ function updateUI() {
     document.getElementById('br-progression-text').innerText = displayProg.toFixed(1) + "%";
     document.getElementById('progress-bar-fill').style.width = displayProg + "%";
 
-    // 🛑 APPEL DES DEUX FONCTIONS ICI
-    renderChart(handsLabels, profitsNet);
-    renderCalendar(filteredSessions); 
+  // 🛑 ON INVERSE L'ORDRE ICI POUR PROTÉGER LE CALENDRIER
+    renderCalendar(filteredSessions); // 👈 Le calendrier se met à jour en 1er
+    renderChart(handsLabels, profitsNet); // 👈 Le graphique en 2ème
 }
 
 // --- 6. CHART ET AUDIO (AVEC EFFET NÉON AFFINÉ ET INTENSE - TECHNIQUE SABRE LASER) ---
@@ -653,18 +653,41 @@ function playPop() {
 }
 
 // --- 9. CALENDRIER PNL (AXIOM STYLE) ---
-let currentCalDate = new Date(); // 👈 Nouvelle mémoire pour retenir le mois qu'on est en train de regarder
+let currentCalDate = new Date(); 
+currentCalDate.setDate(1); // 👈 SÉCURITÉ : Empêche le bug du 31 du mois !
 
 function toggleHistoryFlip() {
     const flipper = document.getElementById('history-flipper');
-    if (flipper) flipper.classList.toggle('is-flipped');
+    if (flipper) {
+        flipper.classList.toggle('is-flipped');
+        
+        // 🛑 LA MAGIE ANTI-BUG EST ICI !
+        // On désactive le bouclier invisible de la face avant pour laisser passer tes clics !
+        const frontFace = flipper.querySelector('.flip-front');
+        if (frontFace) {
+            frontFace.style.pointerEvents = flipper.classList.contains('is-flipped') ? 'none' : 'auto';
+        }
+    }
 }
 
-// 👈 Nouvelle fonction pour changer de mois !
-function changeCalMonth(offset) {
+// Fonction isolée et sécurisée
+window.changeCalMonth = function(offset) {
     currentCalDate.setMonth(currentCalDate.getMonth() + offset);
-    updateUI(); // Recharge la page avec le nouveau mois
-}
+    
+    // 1. On regarde quel filtre est activé (NL2, NL10, ALL)
+    const filterElem = document.getElementById('global-filter');
+    const filterValue = filterElem ? filterElem.value : "ALL";
+
+    // 2. On filtre les sessions sans recharger tout le reste de la page
+    let filteredSessions = sessions.filter(s => {
+        const sessionStake = s.stake || "NL10";
+        if (filterValue === "ALL") return true;
+        return sessionStake === filterValue;
+    });
+
+    // 3. On met à jour UNIQUEMENT le calendrier
+    renderCalendar(filteredSessions);
+};
 
 function renderCalendar(filteredSessions) {
     const calContainer = document.getElementById('calendar-view');
@@ -676,11 +699,10 @@ function renderCalendar(filteredSessions) {
         if(!s.fullDate) return;
         const dateStr = s.fullDate.split('T')[0]; 
         
-        // On crée une petite mémoire pour chaque jour qui stocke le gain et les limites
         if (!dailyData[dateStr]) dailyData[dateStr] = { gain: 0, stakes: new Set() };
         
         dailyData[dateStr].gain += s.gain;
-        dailyData[dateStr].stakes.add(s.stake || "NL10"); // Enregistre la limite jouée
+        dailyData[dateStr].stakes.add(s.stake || "NL10");
     });
 
     // 2. On configure le mois affiché
@@ -693,12 +715,12 @@ function renderCalendar(filteredSessions) {
 
     const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
-    // 3. On dessine la grille AVEC LES FLÈCHES DE NAVIGATION
+    // 3. Boutons blindés avec z-index maximal (9999) pour transpercer tous les calques
     let html = `
     <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 10px 5px 10px;">
-        <button onclick="changeCalMonth(-1)" style="background: rgba(255,255,255,0.1); border: none; color: #fff; cursor: pointer; border-radius: 4px; padding: 4px 12px; font-size: 0.8rem; transition: 0.2s; display: flex; align-items: center; justify-content: center;">◀</button>
-        <span style="line-height: 1; transform: translateY(1px);">${monthNames[month]} ${year}</span>
-        <button onclick="changeCalMonth(1)" style="background: rgba(255,255,255,0.1); border: none; color: #fff; cursor: pointer; border-radius: 4px; padding: 4px 12px; font-size: 0.8rem; transition: 0.2s; display: flex; align-items: center; justify-content: center;">▶</button>
+        <button type="button" onclick="window.changeCalMonth(-1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">◀</button>
+        <span style="line-height: 1; transform: translateY(1px); font-weight: 800;">${monthNames[month]} ${year}</span>
+        <button type="button" onclick="window.changeCalMonth(1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">▶</button>
     </div>`;
     
     html += `<div class="calendar-grid">`;
@@ -721,7 +743,6 @@ function renderCalendar(filteredSessions) {
 
         if (data !== undefined) {
             const pnl = data.gain;
-            // On transforme la liste des limites en texte (ex: "NL10" ou "NL2 / NL10")
             const stakesStr = Array.from(data.stakes).join(' / '); 
 
             if (pnl > 0) classes += " win";
@@ -730,7 +751,6 @@ function renderCalendar(filteredSessions) {
 
             content += `<span class="cal-pnl">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</span>`;
             
-            // 👈 L'étiquette bleue de la limite est ajoutée ici en haut à droite !
             content += `<span style="position: absolute; top: 3px; right: 4px; font-size: 0.5rem; color: #60a5fa; font-weight: 700; letter-spacing: 0.5px;">${stakesStr}</span>`;
         }
 
