@@ -693,16 +693,18 @@ function renderCalendar(filteredSessions) {
     const calContainer = document.getElementById('calendar-view');
     if (!calContainer) return;
 
-    // 1. On regroupe tous les gains ET les limites par jour
+    // 1. On regroupe tous les gains, les limites ET le volume (mains) par jour
     const dailyData = {};
     filteredSessions.forEach(s => {
         if(!s.fullDate) return;
         const dateStr = s.fullDate.split('T')[0]; 
         
-        if (!dailyData[dateStr]) dailyData[dateStr] = { gain: 0, stakes: new Set() };
+        // 👈 Ajout de "hands: 0" dans la mémoire de chaque jour
+        if (!dailyData[dateStr]) dailyData[dateStr] = { gain: 0, stakes: new Set(), hands: 0 };
         
         dailyData[dateStr].gain += s.gain;
         dailyData[dateStr].stakes.add(s.stake || "NL10");
+        dailyData[dateStr].hands += (parseInt(s.hands) || 0); // 👈 On additionne les mains jouées
     });
 
     // 2. On configure le mois affiché
@@ -715,7 +717,7 @@ function renderCalendar(filteredSessions) {
 
     const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
-    // 3. Boutons blindés avec z-index maximal (9999) pour transpercer tous les calques
+    // 3. On dessine la grille et les boutons (inchangé)
     let html = `
     <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 10px 5px 10px;">
         <button type="button" onclick="window.changeCalMonth(-1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">◀</button>
@@ -733,7 +735,7 @@ function renderCalendar(filteredSessions) {
         html += `<div class="cal-day empty"></div>`;
     }
 
-    // 4. On remplit les cases du calendrier
+    // 4. On remplit les cases du calendrier avec PNL, Limite ET Mains
     for(let d = 1; d <= daysInMonth; d++) {
         const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const data = dailyData[dateStr];
@@ -751,7 +753,11 @@ function renderCalendar(filteredSessions) {
 
             content += `<span class="cal-pnl">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</span>`;
             
+            // L'étiquette bleue de la limite (en haut à droite)
             content += `<span style="position: absolute; top: 3px; right: 4px; font-size: 0.5rem; color: #60a5fa; font-weight: 700; letter-spacing: 0.5px;">${stakesStr}</span>`;
+            
+            // 👈 L'étiquette grise du volume de mains (centrée tout en bas)
+            content += `<span style="position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); font-size: 0.55rem; color: #aaa; font-weight: 500; letter-spacing: 0.3px;">${data.hands.toLocaleString()} h</span>`;
         }
 
         html += `<div class="${classes}">${content}</div>`;
