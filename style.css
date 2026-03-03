@@ -779,3 +779,28 @@ select option {
 .cal-day.loss .cal-pnl { color: #ff5555; text-shadow: 0 0 8px rgba(255,85,85,0.3); }
 .cal-day.even { background: rgba(100, 100, 100, 0.2); border: 1px solid #555; }
 .cal-day.even .cal-pnl { color: #ccc; }
+
+/* --- NOUVEAU STYLE BOUTON AJOUTER (MODE PNL CARD) --- */
+.entry-form button {
+    background: rgba(59, 130, 246, 0.1) !important;
+    border: 1px solid rgba(59, 130, 246, 0.4) !important;
+    color: #60a5fa !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+.entry-form button:hover {
+    background: rgba(59, 130, 246, 0.2) !important;
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.3) !important;
+    color: #fff !important;
+}
+
+/* --- ANIMATION SURVOL BOUTON VUE PNL --- */
+button[onclick="toggleHistoryFlip()"]:hover {
+    background: rgba(59, 130, 246, 0.2) !important;
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.3) !important;
+    color: #fff !important;
+}
