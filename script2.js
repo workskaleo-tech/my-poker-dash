@@ -800,3 +800,54 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// --- 11. MODALE RANGES ET NAVIGATION ---
+window.currentRangePage = 0;
+window.rangeTitles = ["Iso & Squeeze", "3bet & Défense"];
+
+window.openRangeModal = function() {
+    const modal = document.getElementById('range-modal');
+    if (modal) {
+        modal.classList.add('show');
+        // On remet sur la page 1 à chaque ouverture
+        window.currentRangePage = 0;
+        document.getElementById('range-page-0').style.display = 'block';
+        document.getElementById('range-page-1').style.display = 'none';
+        document.getElementById('range-page-title').innerText = window.rangeTitles[0];
+    }
+}
+
+window.closeRangeModal = function() {
+    const modal = document.getElementById('range-modal');
+    if (modal) modal.classList.remove('show');
+}
+
+// Fonction de navigation entre les pages
+window.changeRangePage = function(offset) {
+    // Calcule la nouvelle page (0 ou 1)
+    window.currentRangePage = (window.currentRangePage + offset + 2) % 2; 
+    
+    // Cache tout
+    document.getElementById('range-page-0').style.display = 'none';
+    document.getElementById('range-page-1').style.display = 'none';
+    
+    // Affiche la bonne page
+    const activePage = document.getElementById('range-page-' + window.currentRangePage);
+    activePage.style.display = 'block';
+    
+    // Relance la petite animation d'apparition si elle existe dans ton CSS
+    activePage.style.animation = 'none';
+    activePage.offsetHeight; 
+    activePage.style.animation = 'slideInFade 0.3s ease-out forwards';
+    
+    // Met à jour le texte entre les flèches
+    document.getElementById('range-page-title').innerText = window.rangeTitles[window.currentRangePage];
+}
+
+// Fermeture en cliquant à l'extérieur
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('range-modal');
+    if (e.target === modal) {
+        window.closeRangeModal();
+    }
+});
