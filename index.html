@@ -181,13 +181,59 @@
 
             <div style="display: flex; justify-content: center; align-items: center; padding: 15px 0 5px 0; gap: 15px; background: rgba(0,0,0,0.1); border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <button type="button" onclick="window.changeRangePage(-1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: 0.2s; z-index: 10;">◀</button>
-                <span id="range-page-title" style="color: #fff; font-weight: 700; font-size: 1rem; min-width: 150px; text-align: center;">Iso & Squeeze</span>
+                <span id="range-page-title" style="color: #fff; font-weight: 700; font-size: 1rem; min-width: 150px; text-align: center;">🟢 Open Raise</span>
                 <button type="button" onclick="window.changeRangePage(1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: 0.2s; z-index: 10;">▶</button>
             </div>
 
             <div class="modal-body" style="overflow-x: hidden;">
                 
                 <div id="range-page-0" class="range-page">
+                    <div class="range-section">
+                        <h3 style="color: #4ade80;">🟢 Open Raise (RFI)</h3>
+                        <p class="range-desc">Personne n'a misé avant toi (Relance 2.5x à 3x la blinde)</p>
+                        
+                        <div class="range-grid">
+                            <div class="range-card" style="border-top: 2px solid #ef4444;">
+                                <h4>UTG / HJ (Début de parole)</h4>
+                                <div class="badges">
+                                    <span class="badge pair">77+</span>
+                                    <span class="badge ace">ATs+, AJo+</span>
+                                    <span class="badge broadway">KQs, KJs, KQo</span>
+                                    <span class="badge suited">T9s, JTs, QJs</span>
+                                </div>
+                            </div>
+                            <div class="range-card" style="border-top: 2px solid #f59e0b;">
+                                <h4>Cutoff (CO)</h4>
+                                <div class="badges">
+                                    <span class="badge pair">22+</span>
+                                    <span class="badge ace">A2s+, ATo+</span>
+                                    <span class="badge broadway">KTs+, KJo+</span>
+                                    <span class="badge suited">76s à QJs</span>
+                                </div>
+                            </div>
+                            <div class="range-card" style="border-top: 2px solid #10b981;">
+                                <h4>Bouton (BTN - Vol)</h4>
+                                <div class="badges">
+                                    <span class="badge pair">22+</span>
+                                    <span class="badge ace">A2s+, A2o+</span>
+                                    <span class="badge broadway">K2s+, K8o+, Q8s+</span>
+                                    <span class="badge suited">54s à JTs, 86s+</span>
+                                </div>
+                            </div>
+                            <div class="range-card" style="border-top: 2px solid #3b82f6;">
+                                <h4>Small Blind (SB)</h4>
+                                <div class="badges">
+                                    <span class="badge pair">22+</span>
+                                    <span class="badge ace">A2s+, A8o+</span>
+                                    <span class="badge broadway">K9s+, KTo+, Q9s+</span>
+                                    <span class="badge suited">87s à JTs</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="range-page-1" class="range-page" style="display: none;">
                     <div class="range-section">
                         <h3>🔥 Isolation (Iso-Raise)</h3>
                         <p class="range-desc">Contre les Limpers (Relance 4BB + 1BB/limper)</p>
@@ -235,7 +281,7 @@
                     </div>
                 </div>
 
-                <div id="range-page-1" class="range-page" style="display: none;">
+                <div id="range-page-2" class="range-page" style="display: none;">
                     <div class="range-section">
                         <h3>🚀 3bet (Sur-relance)</h3>
                         <p class="range-desc">Face à un open-raise (Relance 3x en position / 4x hors position)</p>

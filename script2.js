@@ -47,8 +47,17 @@ function setTodayDate() {
     const inputDate = document.getElementById('input-date');
     const inputTime = document.getElementById('input-time');
     const now = new Date();
-    if(inputDate) inputDate.value = now.toISOString().split('T')[0];
-    if(inputTime) inputTime.value = now.toTimeString().slice(0,5); 
+    
+    // 🛑 CORRECTION : On force l'heure et la date LOCALE (la tienne, pas celle de Londres)
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+
+    if(inputDate) inputDate.value = `${year}-${month}-${day}`;
+    if(inputTime) inputTime.value = `${hours}:${minutes}`;
 }
 
 function addSession() {
@@ -66,16 +75,23 @@ function addSession() {
 
     if (isNaN(hands) || isNaN(gain) || !rawDate || !rawTime) return alert("Remplis tout !");
 
+    // 🛑 L'ASTUCE EST ICI : On ajoute les secondes et millisecondes exactes du clic
+    // pour que deux sessions avec la même heure ne soient jamais identiques !
+    const now = new Date();
+    const sec = String(now.getSeconds()).padStart(2, '0');
+    const ms = String(now.getMilliseconds()).padStart(3, '0');
+    const uniqueFullDate = `${rawDate}T${rawTime}:${sec}.${ms}`; 
+
     db.collection("sessions").add({
         date: rawDate.split('-').reverse().slice(0,2).join('/'),
-        fullDate: rawDate + "T" + rawTime, 
+        fullDate: uniqueFullDate, // 👈 On utilise notre date ultra-précise
         hands: hands,
         gain: gain,
         stake: stake
     }).then(() => {
         if(typeof playPop === "function") playPop();
         handsInput.value = ''; gainInput.value = '';
-        setTodayDate(); // 👈 Remet l'horloge à jour pour la prochaine session !
+        setTodayDate(); 
     });
 }
 
