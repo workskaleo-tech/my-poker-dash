@@ -819,16 +819,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- 11. MODALE RANGES ET NAVIGATION ---
 window.currentRangePage = 0;
-window.rangeTitles = ["Iso & Squeeze", "3bet & Défense"];
+// 👈 On met le nouveau tableau des 4 titres dans le bon ordre
+window.rangeTitles = ["🟢 Open Raise", "🚀 3bet & Défense", "🔥 Iso & Squeeze", "🧮 Équité & Maths"]; 
 
 window.openRangeModal = function() {
     const modal = document.getElementById('range-modal');
     if (modal) {
         modal.classList.add('show');
-        // On remet sur la page 1 à chaque ouverture
         window.currentRangePage = 0;
+        
+        // On cache toutes les pages pour être propre
+        for(let i = 0; i <= 3; i++) {
+            let p = document.getElementById('range-page-' + i);
+            if(p) p.style.display = 'none';
+        }
+        
+        // On n'affiche que la 1ère
         document.getElementById('range-page-0').style.display = 'block';
-        document.getElementById('range-page-1').style.display = 'none';
         document.getElementById('range-page-title').innerText = window.rangeTitles[0];
     }
 }
@@ -838,29 +845,27 @@ window.closeRangeModal = function() {
     if (modal) modal.classList.remove('show');
 }
 
-// Fonction de navigation entre les pages
 window.changeRangePage = function(offset) {
-    // Calcule la nouvelle page (0 ou 1)
-    window.currentRangePage = (window.currentRangePage + offset + 2) % 2; 
+    // 👈 MAGIE MATHÉMATIQUE : On remplace par 4 pour boucler sur 4 pages !
+    window.currentRangePage = (window.currentRangePage + offset + 4) % 4; 
     
-    // Cache tout
-    document.getElementById('range-page-0').style.display = 'none';
-    document.getElementById('range-page-1').style.display = 'none';
+    // On cache les 4 pages
+    for(let i = 0; i <= 3; i++) {
+        let p = document.getElementById('range-page-' + i);
+        if(p) p.style.display = 'none';
+    }
     
-    // Affiche la bonne page
+    // On affiche la bonne page avec l'animation
     const activePage = document.getElementById('range-page-' + window.currentRangePage);
     activePage.style.display = 'block';
     
-    // Relance la petite animation d'apparition si elle existe dans ton CSS
     activePage.style.animation = 'none';
     activePage.offsetHeight; 
     activePage.style.animation = 'slideInFade 0.3s ease-out forwards';
     
-    // Met à jour le texte entre les flèches
     document.getElementById('range-page-title').innerText = window.rangeTitles[window.currentRangePage];
 }
 
-// Fermeture en cliquant à l'extérieur
 window.addEventListener('click', (e) => {
     const modal = document.getElementById('range-modal');
     if (e.target === modal) {
