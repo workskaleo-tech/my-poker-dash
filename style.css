@@ -917,3 +917,105 @@ button[onclick="toggleHistoryFlip()"]:hover {
     from { opacity: 0; transform: translateX(30px); }
     to { opacity: 1; transform: translateX(0); }
 }
+
+/* =========================================
+   📱 CORRECTIONS MOBILE (CALENDRIER & MODALE) 
+   ========================================= */
+
+/* 1. Modale Ranges : Centrage Parfait (Sans décalage à gauche) */
+.modal-overlay {
+    padding: 0 !important; /* 👈 On enlève le padding qui décalait tout ! */
+}
+
+.modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 85vh !important; 
+    width: 90vw !important; /* 👈 On prend 90% de l'écran, peu importe le téléphone */
+    max-width: 400px !important;
+    margin: 0 auto !important; /* 👈 Centrage horizontal absolu */
+    box-sizing: border-box !important;
+}
+
+.modal-body {
+    flex: 1 !important; 
+    overflow-y: auto !important; 
+    overflow-x: hidden !important; 
+    padding: 15px !important;
+    box-sizing: border-box !important;
+}
+
+@media (max-width: 500px) {
+    /* ==========================================
+       🛠️ FIX 1 : CALENDRIER (Le "h" sur la même ligne)
+       ========================================== */
+    .cal-day {
+        min-height: 65px !important; 
+        padding-bottom: 18px !important; 
+    }
+    
+    .cal-pnl {
+        font-size: 0.55rem !important; /* 👈 On réduit bien la taille pour que ça rentre */
+        font-weight: 500 !important; /* 👈 On enlève l'effet "trop gras" (normalement c'est 700) */
+        margin-top: -4px !important; /* 👈 On le recentre parfaitement */
+        width: 90% !important; /* 👈 On laisse une petite marge de sécurité sur les bords */
+        white-space: nowrap !important; /* 👈 On interdit formellement de passer à la ligne */
+        overflow: hidden !important; 
+        text-overflow: ellipsis !important; /* Sécurité si un jour tu gagnes +100000.00€ ! */
+    }
+
+    .cal-day span[style*="top: 3px"] {
+        font-size: 0.45rem !important;
+        right: 2px !important;
+    }
+
+    .cal-day span[style*="bottom: 3px"] {
+        font-size: 0.5rem !important;
+        bottom: 2px !important; 
+        white-space: nowrap !important; /* 👈 LA MAGIE EST ICI : Interdit au "h" de sauter une ligne ! */
+    }
+    
+    /* ==========================================
+       🛠️ FIX 2 : RANGES (Centrage parfait des cartes)
+       ========================================== */
+    .range-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important; 
+        gap: 15px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .range-card {
+        width: 100% !important; 
+        max-width: 320px !important; 
+        padding: 15px !important;
+        box-sizing: border-box !important;
+        margin: 0 auto !important; 
+    }
+}
+
+/* ==========================================
+   🎯 CENTRAGE PARFAIT DU MONTANT PNL
+   ========================================== */
+.cal-day {
+    position: relative !important; /* Indispensable pour centrer les éléments à l'intérieur */
+}
+
+.cal-date {
+    position: absolute !important;
+    top: 4px !important;
+    left: 4px !important;
+    line-height: 1 !important;
+}
+
+.cal-pnl {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important; /* 👈 La formule magique du centrage absolu */
+    margin: 0 !important; /* Annule les anciens marges qui décalaient tout */
+    width: 100% !important;
+    text-align: center !important;
+}
