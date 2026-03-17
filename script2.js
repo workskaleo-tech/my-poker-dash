@@ -66,17 +66,17 @@ function addSession() {
     const dateInput = document.getElementById('input-date');
     const timeInput = document.getElementById('input-time');
     const stakeInput = document.getElementById('input-stake');
+    const roomInput = document.getElementById('input-room'); // 👈 Récupère le menu déroulant
     
     const hands = parseInt(handsInput.value);
     const gain = parseFloat(gainInput.value);
     const rawDate = dateInput.value;
     const rawTime = timeInput.value;
     const stake = stakeInput ? stakeInput.value : "NL10";
+    const room = roomInput ? roomInput.value : "stake"; // 👈 Par défaut sur Stake
 
     if (isNaN(hands) || isNaN(gain) || !rawDate || !rawTime) return alert("Remplis tout !");
 
-    // 🛑 L'ASTUCE EST ICI : On ajoute les secondes et millisecondes exactes du clic
-    // pour que deux sessions avec la même heure ne soient jamais identiques !
     const now = new Date();
     const sec = String(now.getSeconds()).padStart(2, '0');
     const ms = String(now.getMilliseconds()).padStart(3, '0');
@@ -84,17 +84,17 @@ function addSession() {
 
     db.collection("sessions").add({
         date: rawDate.split('-').reverse().slice(0,2).join('/'),
-        fullDate: uniqueFullDate, // 👈 On utilise notre date ultra-précise
+        fullDate: uniqueFullDate,
         hands: hands,
         gain: gain,
-        stake: stake
+        stake: stake,
+        room: room // 👈 Enregistre la room en base de données
     }).then(() => {
         if(typeof playPop === "function") playPop();
         handsInput.value = ''; gainInput.value = '';
         setTodayDate(); 
     });
 }
-
 function deleteSession(id) {
     if(confirm("Supprimer ?")) db.collection("sessions").doc(id).delete();
 }
@@ -155,8 +155,18 @@ function updateUI() {
         const gainBB = s.gain / bbValue;
         totalBB += gainBB;
 
+        // 👇 1. AJOUT DU CALCUL DE LA ROOM ICI (On utilise bien "s.room") 👇
+        const currentRoom = s.room || 'stake';
+        const roomIcon = currentRoom === 'coinpoker' ? '🪙' : '🎲';
+
+        // 👇 2. MODIFICATION DU ROWS.PUSH 👇
         rows.push(`<tr>
-            <td style="color: #888; font-weight: 400;">${s.date} <br><small style="font-weight:400; color:#3b82f6;">${sessionStake}</small></td>
+            <td style="color: #888; font-weight: 400;">
+                ${s.date} <br>
+                <small style="font-weight:400; color:#3b82f6;">
+                    ${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span>
+                </small>
+            </td>
             <td style="font-weight: 400;">${s.hands.toLocaleString()}</td>
             <td style="color: ${s.gain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${s.gain.toFixed(2)}€</td>
             <td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">
@@ -718,9 +728,12 @@ function renderCalendar(filteredSessions) {
         // 👈 Ajout de "hands: 0" dans la mémoire de chaque jour
         if (!dailyData[dateStr]) dailyData[dateStr] = { gain: 0, stakes: new Set(), hands: 0 };
         
+        // 🛑 ON SAUVEGARDE AUSSI LA ROOM ICI
+        dailyData[dateStr].room = s.room;
+        
         dailyData[dateStr].gain += s.gain;
         dailyData[dateStr].stakes.add(s.stake || "NL10");
-        dailyData[dateStr].hands += (parseInt(s.hands) || 0); // 👈 On additionne les mains jouées
+        dailyData[dateStr].hands += (parseInt(s.hands) || 0); 
     });
 
     // 2. On configure le mois affiché
@@ -733,7 +746,7 @@ function renderCalendar(filteredSessions) {
 
     const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
-    // 3. On dessine la grille et les boutons (inchangé)
+    // 3. On dessine la grille et les boutons
     let html = `
     <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 10px 5px 10px;">
         <button type="button" onclick="window.changeCalMonth(-1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">◀</button>
@@ -757,23 +770,28 @@ function renderCalendar(filteredSessions) {
         const data = dailyData[dateStr];
 
         let classes = "cal-day";
+        // On initialise content
         let content = `<span class="cal-date">${d}</span>`;
+        
 
         if (data !== undefined) {
+            // 👇 AJOUT DU BADGE ICI 👇
+            const currentRoom = data.room || 'stake';
+            const roomBadgeText = currentRoom === 'coinpoker' ? '🪙 Coin' : '🎲 Stake';
+            content += `<span class="room-badge room-${currentRoom}">${roomBadgeText}</span>`;
+            // 👆 FIN DU BADGE 👆
+
             const pnl = data.gain;
-            const stakesStr = Array.from(data.stakes).join(' / '); 
+            const stakesStr = Array.from(data.stakes).join(' / ');
 
             if (pnl > 0) classes += " win";
             else if (pnl < 0) classes += " loss";
             else classes += " even";
 
-            content += `<span class="cal-pnl">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</span>`;
-            
-            // L'étiquette bleue de la limite (en haut à droite)
-            content += `<span style="position: absolute; top: 3px; right: 4px; font-size: 0.5rem; color: #60a5fa; font-weight: 700; letter-spacing: 0.5px;">${stakesStr}</span>`;
-            
-            // 👈 L'étiquette grise du volume de mains (centrée tout en bas)
-            content += `<span style="position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); font-size: 0.55rem; color: #aaa; font-weight: 500; letter-spacing: 0.3px;">${data.hands.toLocaleString()} h</span>`;
+            // 🛑 AJOUT DU RESTE DES INFOS CORRECTEMENT FORMATÉES
+            content += `<span style="position: absolute; top: 3px; right: 4px; font-size: 0.55rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase;">${stakesStr}</span>`;
+            content += `<p class="cal-pnl">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</p>`;
+            content += `<span style="position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font-size: 0.6rem; color: #888; font-weight: 600;">${data.hands} h</span>`;
         }
 
         html += `<div class="${classes}">${content}</div>`;
