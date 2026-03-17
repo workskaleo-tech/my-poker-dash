@@ -775,12 +775,6 @@ function renderCalendar(filteredSessions) {
         
 
         if (data !== undefined) {
-            // 👇 AJOUT DU BADGE ICI 👇
-            const currentRoom = data.room || 'stake';
-            const roomBadgeText = currentRoom === 'coinpoker' ? '🪙 Coin' : '🎲 Stake';
-            content += `<span class="room-badge room-${currentRoom}">${roomBadgeText}</span>`;
-            // 👆 FIN DU BADGE 👆
-
             const pnl = data.gain;
             const stakesStr = Array.from(data.stakes).join(' / ');
 
@@ -788,7 +782,7 @@ function renderCalendar(filteredSessions) {
             else if (pnl < 0) classes += " loss";
             else classes += " even";
 
-            // 🛑 AJOUT DU RESTE DES INFOS CORRECTEMENT FORMATÉES
+            // 🛑 AJOUT DU RESTE DES INFOS CORRECTEMENT FORMATÉES (SANS LE BADGE)
             content += `<span style="position: absolute; top: 3px; right: 4px; font-size: 0.55rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase;">${stakesStr}</span>`;
             content += `<p class="cal-pnl">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</p>`;
             content += `<span style="position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font-size: 0.6rem; color: #888; font-weight: 600;">${data.hands} h</span>`;
