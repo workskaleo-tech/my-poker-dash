@@ -1047,3 +1047,27 @@ button[onclick="toggleHistoryFlip()"]:hover {
     color: #34d399 !important;
     border: 1px solid rgba(16, 185, 129, 0.3) !important;
 }
+
+/* ==========================================
+   📏 ALIGNEMENT PARFAIT DES 4 BOUTONS HAUT
+   ========================================== */
+
+/* On cible tes 2 boutons ET tes 2 menus pour les forcer à la même taille */
+button[onclick="login()"], 
+button[onclick="openRangeModal()"], 
+#global-filter, 
+#room-filter {
+    height: 32px !important; /* 👈 On impose 42px à TOUT LE MONDE */
+    box-sizing: border-box !important;
+    vertical-align: top !important; /* 👈 Aligne tout sur la ligne du haut */
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* On ajuste juste le texte à l'intérieur pour qu'il soit bien centré */
+#global-filter, 
+#room-filter {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    line-height: 40px !important; 
+}

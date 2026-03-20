@@ -104,6 +104,10 @@ function updateUI() {
     const filterElem = document.getElementById('global-filter');
     const filterValue = filterElem ? filterElem.value : "ALL";
 
+    // 👇 1. ON RÉCUPÈRE LE NOUVEAU FILTRE DE ROOM 👇
+    const roomFilterElem = document.getElementById('room-filter');
+    const roomFilterValue = roomFilterElem ? roomFilterElem.value : "ALL";
+
     let startBR, goalBR;
     if (filterValue === "NL10") {
         startBR = 500;
@@ -121,10 +125,15 @@ function updateUI() {
         xpTitle.innerHTML = `<span class="xp-start">🏁 Départ ${startBR}€</span> <span class="xp-arrow">➔</span> <span class="xp-goal">🎯 Objectif ${goalBR}€</span>`;
     }
 
+    // 👇 2. ON APPLIQUE LE DOUBLE FILTRE (Limite + Room) 👇
     let filteredSessions = sessions.filter(s => {
         const sessionStake = s.stake || "NL10";
-        if (filterValue === "ALL") return true;
-        return sessionStake === filterValue;
+        const sessionRoom = s.room || "stake"; // (Par défaut Stake si c'est une vieille session)
+
+        let matchStake = (filterValue === "ALL") || (sessionStake === filterValue);
+        let matchRoom = (roomFilterValue === "ALL") || (sessionRoom === roomFilterValue);
+
+        return matchStake && matchRoom;
     });
 
     let handsLabels = [0]; let profitsNet = [0];  
@@ -700,18 +709,24 @@ function toggleHistoryFlip() {
 window.changeCalMonth = function(offset) {
     currentCalDate.setMonth(currentCalDate.getMonth() + offset);
     
-    // 1. On regarde quel filtre est activé (NL2, NL10, ALL)
     const filterElem = document.getElementById('global-filter');
     const filterValue = filterElem ? filterElem.value : "ALL";
 
-    // 2. On filtre les sessions sans recharger tout le reste de la page
+    // 👇 On récupère le filtre ici aussi
+    const roomFilterElem = document.getElementById('room-filter');
+    const roomFilterValue = roomFilterElem ? roomFilterElem.value : "ALL";
+
+    // 👇 Et on applique le double filtre
     let filteredSessions = sessions.filter(s => {
         const sessionStake = s.stake || "NL10";
-        if (filterValue === "ALL") return true;
-        return sessionStake === filterValue;
+        const sessionRoom = s.room || "stake";
+
+        let matchStake = (filterValue === "ALL") || (sessionStake === filterValue);
+        let matchRoom = (roomFilterValue === "ALL") || (sessionRoom === roomFilterValue);
+
+        return matchStake && matchRoom;
     });
 
-    // 3. On met à jour UNIQUEMENT le calendrier
     renderCalendar(filteredSessions);
 };
 
