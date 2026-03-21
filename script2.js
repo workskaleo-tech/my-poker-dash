@@ -69,15 +69,15 @@ function addSession() {
     const roomInput = document.getElementById('input-room');
     const rakebackInput = document.getElementById('input-rakeback');
     
-    const hands = parseInt(handsInput.value);
-    const gain = parseFloat(gainInput.value);
+    const hands = parseInt(handsInput.value) || 0;
+    const gain = parseFloat(gainInput.value) || 0;
     const rakeback = parseFloat(rakebackInput ? rakebackInput.value : 0) || 0;
     const rawDate = dateInput.value;
     const rawTime = timeInput.value;
     const stake = stakeInput ? stakeInput.value : "NL10";
     const room = roomInput ? roomInput.value : "stake";
 
-    if (isNaN(hands) || isNaN(gain) || !rawDate || !rawTime) return alert("Remplis tout !");
+    if (!rawDate || !rawTime) return alert("Remplis la date et l'heure !");
 
     const now = new Date();
     const sec = String(now.getSeconds()).padStart(2, '0');
@@ -169,6 +169,9 @@ function updateUI() {
         const gainBB = s.gain / bbValue;
         totalBB += gainBB;
 
+        // Ne pas afficher dans l'historique les entrées rakeback-only
+        const isRakebackOnly = (s.hands === 0 && s.gain === 0);
+
         const currentRoom = s.room || 'stake';
         const roomIcon = currentRoom === 'coinpoker' ? '🪙' : '🎲';
 
@@ -176,20 +179,36 @@ function updateUI() {
             ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${s.rakeback.toFixed(2)}€ RB</span>`
             : '';
 
-        rows.push(`<tr>
-            <td style="color: #888; font-weight: 400;">
-                ${s.date} <br>
-                <small style="font-weight:400; color:#3b82f6;">
-                    ${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span>
-                </small>
-            </td>
-            <td style="font-weight: 400;">${s.hands.toLocaleString()}</td>
-            <td style="color: ${s.gain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${s.gain.toFixed(2)}€${rakebackBadge}</td>
-            <td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">
-                ${gainBB.toFixed(1)} BB
-            </td>
-            <td>${isAntoine ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
-        </tr>`);
+        if (isRakebackOnly) {
+            // Entrée rakeback-only : visible uniquement par l'admin avec juste un bouton supprimer
+            if (isAntoine) {
+                rows.push(`<tr style="opacity: 0.5;">
+                    <td style="color: #888; font-weight: 400;">
+                        ${s.date} <br>
+                        <small style="font-weight:400; color:#a78bfa;">RB only</small>
+                    </td>
+                    <td style="color: #888;">—</td>
+                    <td style="color: #a78bfa; font-weight: 400;">+${(s.rakeback || 0).toFixed(2)}€ RB</td>
+                    <td style="color: #888;">—</td>
+                    <td><button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button></td>
+                </tr>`);
+            }
+        } else {
+            rows.push(`<tr>
+                <td style="color: #888; font-weight: 400;">
+                    ${s.date} <br>
+                    <small style="font-weight:400; color:#3b82f6;">
+                        ${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span>
+                    </small>
+                </td>
+                <td style="font-weight: 400;">${s.hands.toLocaleString()}</td>
+                <td style="color: ${s.gain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${s.gain.toFixed(2)}€${rakebackBadge}</td>
+                <td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">
+                    ${gainBB.toFixed(1)} BB
+                </td>
+                <td>${isAntoine ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
+            </tr>`);
+        }
     });
 
     if(historyBody) historyBody.innerHTML = rows.reverse().join('');
