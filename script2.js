@@ -66,14 +66,16 @@ function addSession() {
     const dateInput = document.getElementById('input-date');
     const timeInput = document.getElementById('input-time');
     const stakeInput = document.getElementById('input-stake');
-    const roomInput = document.getElementById('input-room'); // 👈 Récupère le menu déroulant
+    const roomInput = document.getElementById('input-room');
+    const rakebackInput = document.getElementById('input-rakeback');
     
     const hands = parseInt(handsInput.value);
     const gain = parseFloat(gainInput.value);
+    const rakeback = parseFloat(rakebackInput ? rakebackInput.value : 0) || 0;
     const rawDate = dateInput.value;
     const rawTime = timeInput.value;
     const stake = stakeInput ? stakeInput.value : "NL10";
-    const room = roomInput ? roomInput.value : "stake"; // 👈 Par défaut sur Stake
+    const room = roomInput ? roomInput.value : "stake";
 
     if (isNaN(hands) || isNaN(gain) || !rawDate || !rawTime) return alert("Remplis tout !");
 
@@ -87,11 +89,13 @@ function addSession() {
         fullDate: uniqueFullDate,
         hands: hands,
         gain: gain,
+        rakeback: rakeback,
         stake: stake,
-        room: room // 👈 Enregistre la room en base de données
+        room: room
     }).then(() => {
         if(typeof playPop === "function") playPop();
         handsInput.value = ''; gainInput.value = '';
+        if(rakebackInput) rakebackInput.value = '';
         setTodayDate(); 
     });
 }
@@ -138,7 +142,7 @@ function updateUI() {
 
     let handsLabels = [0]; let profitsNet = [0];  
     let totalHands = 0; let currentProfitNet = 0; let winningSessions = 0;
-    let totalBB = 0; 
+    let totalBB = 0; let totalRakeback = 0;
     
     let bestGain = -Infinity, worstGain = Infinity;
     let bestSession = null, worstSession = null;
@@ -151,6 +155,7 @@ function updateUI() {
     filteredSessions.forEach((s) => { 
         totalHands += s.hands; 
         currentProfitNet += s.gain;
+        totalRakeback += (s.rakeback || 0);
         if (s.gain > 0) winningSessions++;
         
         if (s.gain > bestGain) { bestGain = s.gain; bestSession = s; }
@@ -164,11 +169,13 @@ function updateUI() {
         const gainBB = s.gain / bbValue;
         totalBB += gainBB;
 
-        // 👇 1. AJOUT DU CALCUL DE LA ROOM ICI (On utilise bien "s.room") 👇
         const currentRoom = s.room || 'stake';
         const roomIcon = currentRoom === 'coinpoker' ? '🪙' : '🎲';
 
-        // 👇 2. MODIFICATION DU ROWS.PUSH 👇
+        const rakebackBadge = (s.rakeback && s.rakeback > 0)
+            ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${s.rakeback.toFixed(2)}€ RB</span>`
+            : '';
+
         rows.push(`<tr>
             <td style="color: #888; font-weight: 400;">
                 ${s.date} <br>
@@ -177,7 +184,7 @@ function updateUI() {
                 </small>
             </td>
             <td style="font-weight: 400;">${s.hands.toLocaleString()}</td>
-            <td style="color: ${s.gain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${s.gain.toFixed(2)}€</td>
+            <td style="color: ${s.gain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${s.gain.toFixed(2)}€${rakebackBadge}</td>
             <td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">
                 ${gainBB.toFixed(1)} BB
             </td>
@@ -206,7 +213,8 @@ function updateUI() {
 
     const brElem = document.getElementById('total-br');
     if(brElem) {
-        const newBr = startBR + currentProfitNet;
+        // Bankroll = gains de jeu + rakeback
+        const newBr = startBR + currentProfitNet + totalRakeback;
         if (previousBr === 0) {
             setTimeout(() => { animateValue('total-br', startBR, newBr, 1500); }, 1200);
         } else if (Math.abs(previousBr - newBr) > 300) {
@@ -216,8 +224,16 @@ function updateUI() {
         }
         previousBr = newBr; 
     }
+
+    // Rakeback affiché séparément
+    const rakebackElem = document.getElementById('total-rakeback');
+    if(rakebackElem) {
+        rakebackElem.innerText = "+" + totalRakeback.toFixed(2) + "€";
+        rakebackElem.style.color = totalRakeback > 0 ? '#a78bfa' : '#9ca3af';
+    }
     
     document.getElementById('total-volume').innerText = totalHands.toLocaleString();
+    // Winrate = uniquement sur les gains de jeu, rakeback exclu
     let winrate = totalHands > 0 ? totalBB / (totalHands / 100) : 0;
     const winrateElem = document.getElementById('winrate');
     winrateElem.innerText = (winrate >= 0 ? '+' : '') + winrate.toFixed(2) + " bb/100";
@@ -226,7 +242,8 @@ function updateUI() {
     let successRate = filteredSessions.length > 0 ? (winningSessions / filteredSessions.length) * 100 : 0;
     document.getElementById('success-rate').innerText = successRate.toFixed(1) + "%";
     
-    let prog = (currentProfitNet / (goalBR - startBR)) * 100;
+    // Progression = gains de jeu + rakeback
+    let prog = ((currentProfitNet + totalRakeback) / (goalBR - startBR)) * 100;
     let displayProg = Math.min(100, Math.max(0, prog)); 
     document.getElementById('br-progression-text').innerText = displayProg.toFixed(1) + "%";
     document.getElementById('progress-bar-fill').style.width = displayProg + "%";
