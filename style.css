@@ -1118,53 +1118,11 @@ button[onclick="openRangeModal()"],
 }
 .btn-spy svg { display:block; filter:drop-shadow(0 0 3px rgba(167,139,250,0.5)); transition:filter 0.2s; }
 .btn-spy:hover svg { filter:drop-shadow(0 0 7px rgba(167,139,250,0.9)); }
-/* LOGIN DROPDOWN */
+/* ── LOGIN DROPDOWN ── */
 .login-group { position:relative; }
-.login-menu { display:none; position:absolute; top:calc(100% + 6px); right:0; background:#111118; border:1px solid rgba(255,255,255,0.1); border-radius:8px; overflow:hidden; min-width:140px; z-index:999; box-shadow:0 8px 24px rgba(0,0,0,0.6); animation:menuIn 0.15s ease-out; }
-@keyframes menuIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+.login-menu { display:none; position:absolute; top:calc(100% + 6px); right:0; background:#111118; border:1px solid rgba(255,255,255,0.1); border-radius:8px; overflow:hidden; min-width:140px; z-index:999; box-shadow:0 8px 24px rgba(0,0,0,0.5); animation:menuFadeIn 0.15s ease-out; }
+@keyframes menuFadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
 .login-menu.open { display:block; }
-.login-menu button { width:100%; background:transparent; border:none; color:#bbb; padding:10px 16px; text-align:left; cursor:pointer; font-family:'Montserrat',sans-serif; font-weight:600; font-size:0.8rem; transition:background 0.15s; display:flex; align-items:center; gap:8px; }
+.login-menu button { width:100%; background:transparent; border:none; color:#ccc; padding:10px 16px; text-align:left; cursor:pointer; font-family:'Montserrat',sans-serif; font-weight:600; font-size:0.8rem; transition:background 0.15s; display:flex; align-items:center; gap:8px; }
 .login-menu button:hover { background:rgba(255,255,255,0.07); color:#fff; }
 .login-menu button:first-child { border-bottom:1px solid rgba(255,255,255,0.06); }
-
-/* ============================================================
-   LOGIN DROPDOWN MENU
-   ============================================================ */
-.login-group { position: relative; }
-.login-menu {
-    display: none;
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    background: #111118;
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
-    overflow: hidden;
-    min-width: 140px;
-    z-index: 999;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-    animation: menuFadeIn 0.15s ease-out;
-}
-@keyframes menuFadeIn {
-    from { opacity:0; transform:translateY(-4px); }
-    to   { opacity:1; transform:translateY(0); }
-}
-.login-menu.open { display: block; }
-.login-menu button {
-    width: 100%;
-    background: transparent;
-    border: none;
-    color: #ccc;
-    padding: 10px 16px;
-    text-align: left;
-    cursor: pointer;
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
-    font-size: 0.8rem;
-    transition: background 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.login-menu button:hover { background: rgba(255,255,255,0.07); color: #fff; }
-.login-menu button:first-child { border-bottom: 1px solid rgba(255,255,255,0.06); }

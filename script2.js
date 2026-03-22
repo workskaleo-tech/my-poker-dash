@@ -15,85 +15,75 @@ const auth = firebase.auth();
 
 // --- 2. SÉCURITÉ ADMIN ---
 const ADMIN_EMAIL = "plessier.antoine10@gmail.com";
-const GUEST_EMAIL  = "strategos.grepolis@gmail.com"; // 👈 Remplace par l'email de ton pote
-let unsubscribeListener = null; // Garde une ref au listener actif
+
+const GUEST_EMAIL = "strategos.grepolis@gmail.com"; // 👈 Remplace par l'email de ton pote
+let currentMode = null;
 
 function toggleLoginMenu() {
     document.getElementById('login-menu').classList.toggle('open');
 }
 document.addEventListener('click', function(e) {
     const g = document.getElementById('login-group');
-    if (g && !g.contains(e.target)) {
-        const m = document.getElementById('login-menu');
-        if (m) m.classList.remove('open');
-    }
+    if (g && !g.contains(e.target)) { const m = document.getElementById('login-menu'); if(m) m.classList.remove('open'); }
 });
 function login(mode) {
-    const m = document.getElementById('login-menu');
-    if (m) m.classList.remove('open');
+    const m = document.getElementById('login-menu'); if(m) m.classList.remove('open');
+    currentMode = mode;
+    sessionStorage.setItem('loginMode', mode);
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).then(result => {
-        const u = result.user;
-        if (mode === 'admin' && u.email !== ADMIN_EMAIL) {
-            auth.signOut(); alert("Compte non autorisé en mode Admin.");
-        } else if (mode === 'guest' && u.email !== GUEST_EMAIL) {
-            auth.signOut(); alert("Compte non autorisé en mode Invité.");
-        }
-    }).catch(err => alert("Erreur : " + err.message));
+    // signInWithRedirect évite les erreurs Cross-Origin-Opener-Policy
+    auth.signInWithRedirect(provider).catch(err => alert("Erreur : " + err.message));
 }
-function logoutUser() {
-    if (unsubscribeListener) { unsubscribeListener(); unsubscribeListener = null; }
-    sessions = []; previousBr = 0;
-    auth.signOut();
-}
+function logoutUser() { auth.signOut().then(() => { currentMode = null; sessionStorage.removeItem('loginMode'); }); }
+
+// Récupère le résultat du redirect au retour sur la page
+auth.getRedirectResult().then(result => {
+    if (!result || !result.user) return;
+    const u = result.user;
+    const mode = sessionStorage.getItem('loginMode') || currentMode;
+    if (mode === 'admin' && u.email !== ADMIN_EMAIL) {
+        auth.signOut(); sessionStorage.removeItem('loginMode'); alert("Compte non autorisé en mode Admin.");
+    } else if (mode === 'guest' && u.email !== GUEST_EMAIL) {
+        auth.signOut(); sessionStorage.removeItem('loginMode'); alert("Compte non autorisé en mode Invité.");
+    }
+}).catch(err => console.warn("Redirect result:", err.message));
 
 auth.onAuthStateChanged(user => {
-    // Coupe l'ancien écouteur avant d'en créer un nouveau
-    if (unsubscribeListener) { unsubscribeListener(); unsubscribeListener = null; }
-
-    const entryForm   = document.querySelector('.entry-form');
-    const resetBtn    = document.querySelector('.btn-reset');
-    const loginGroup  = document.getElementById('login-group');
-    const loggedInfo  = document.getElementById('logged-user-info');
-    const loggedLabel = document.getElementById('logged-label');
-
+    const entryForm  = document.querySelector('.entry-form');
+    const resetBtn   = document.querySelector('.btn-reset');
+    const loginGroup = document.getElementById('login-group');
+    const loggedInfo = document.getElementById('logged-user-info');
+    const loggedLabel= document.getElementById('logged-label');
     const isAdmin = user && user.email === ADMIN_EMAIL;
     const isGuest = user && user.email === GUEST_EMAIL;
 
     if (isAdmin || isGuest) {
-        if (entryForm)   entryForm.style.display  = 'flex';
-        if (resetBtn)    resetBtn.style.display   = isAdmin ? 'block' : 'none';
-        if (loginGroup)  loginGroup.style.display = 'none';
-        if (loggedInfo)  loggedInfo.style.display = 'flex';
-        if (loggedLabel) loggedLabel.innerText    = isAdmin ? '👑 Admin' : '🎮 ' + (user.displayName || 'Invité').split(' ')[0];
+        if (entryForm)  entryForm.style.display  = 'flex';
+        if (resetBtn)   resetBtn.style.display   = isAdmin ? 'block' : 'none';
+        if (loginGroup) loginGroup.style.display = 'none';
+        if (loggedInfo) loggedInfo.style.display = 'flex';
+        if (loggedLabel) loggedLabel.innerText   = isAdmin ? '👑 Admin' : '🎮 ' + (user.displayName||'Invité').split(' ')[0];
+        const col = isGuest ? 'bot_sessions' : 'sessions';
+        db.collection(col).orderBy('fullDate','asc').onSnapshot(snap => {
+            sessions = snap.docs.map(d => ({id:d.id,...d.data()}));
+            updateUI();
+        });
     } else {
         if (entryForm)  entryForm.style.display  = 'none';
         if (resetBtn)   resetBtn.style.display   = 'none';
         if (loginGroup) loginGroup.style.display = 'block';
         if (loggedInfo) loggedInfo.style.display = 'none';
-        sessions = []; previousBr = 0; updateUI();
-    }
-
-    // Lance UN SEUL écouteur sur la bonne collection
-    if (isAdmin || isGuest) {
-        const col = isGuest ? 'bot_sessions' : 'sessions';
-        unsubscribeListener = db.collection(col).orderBy('fullDate','asc').onSnapshot(snap => {
-            sessions = snap.docs.map(d => ({id:d.id,...d.data()}));
-            updateUI();
-        }, err => console.warn('Firestore listener:', err.message));
-    } else {
-        // Visiteur non connecté — lecture seule sur sessions publiques
-        unsubscribeListener = db.collection('sessions').orderBy('fullDate','asc').onSnapshot(snap => {
-            sessions = snap.docs.map(d => ({id:d.id,...d.data()}));
-            updateUI();
-        });
     }
 });
 
 // --- 3. VARIABLES ET SYNCHRO ---
 let sessions = [];
 let previousBr = 0;
-// L'écouteur est géré dans onAuthStateChanged — une seule collection active à la fois
+
+db.collection("sessions").orderBy("fullDate", "asc").onSnapshot((snapshot) => {
+    sessions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    updateUI(); 
+});
 
 // --- 4. FONCTIONS UTILS ---
 function setTodayDate() {
@@ -137,8 +127,8 @@ function addSession() {
     const ms = String(now.getMilliseconds()).padStart(3, '0');
     const uniqueFullDate = `${rawDate}T${rawTime}:${sec}.${ms}`; 
 
-    const col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
-    db.collection(col).add({
+    const _col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
+    db.collection(_col).add({
         date: rawDate.split('-').reverse().slice(0,2).join('/'),
         fullDate: uniqueFullDate,
         hands: hands,
@@ -154,8 +144,8 @@ function addSession() {
     });
 }
 function deleteSession(id) {
-    const col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
-    if(confirm("Supprimer ?")) db.collection(col).doc(id).delete();
+    const _col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
+    if(confirm("Supprimer ?")) db.collection(_col).doc(id).delete();
 }
 
 // --- 5. LOGIQUE D'AFFICHAGE ---
@@ -372,6 +362,7 @@ const neonLinePlugin = {
     
     afterDatasetsDraw(chart, args, options) {
         const { ctx, scales: { x, y } } = chart;
+        if (!ctx || !chart.canvas) return; // Guard null canvas
         const datasetMeta = chart.getDatasetMeta(0);
         const points = datasetMeta.data;
 
@@ -584,8 +575,8 @@ function animateValue(id, start, end, duration) {
 }
 
 function resetData() {
-    const col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
-    if(confirm("Tout supprimer ?")) { db.collection(col).get().then(q => q.forEach(doc => doc.ref.delete())); }
+    const _col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
+    if(confirm("Tout supprimer ?")) { db.collection(_col).get().then((q) => q.forEach(doc => doc.ref.delete())); }
 }
 
 // --- 7. ANIMATIONS DE FOND ---
@@ -772,8 +763,8 @@ function importData() {
                         isoDate = `${annee}-${mois}-${jour}T${String(count).padStart(4, '0')}`;
                     }
 
-                    const col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
-    db.collection(col).add({
+                    const _col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
+    db.collection(_col).add({
                         date: displayDate,
                         fullDate: isoDate,
                         hands: parseInt(s.hands) || 0,
