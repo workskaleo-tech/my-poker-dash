@@ -15,21 +15,56 @@ const auth = firebase.auth();
 
 // --- 2. SÉCURITÉ ADMIN ---
 const ADMIN_EMAIL = "plessier.antoine10@gmail.com";
+const GUEST_EMAIL  = "strategos.grepolis@gmail.com"; // Remplace par email de ton pote
 
-function login() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => alert("Erreur : " + err.message));
+let currentMode = null;
+
+function toggleLoginMenu() {
+    document.getElementById('login-menu').classList.toggle('open');
 }
+document.addEventListener('click', function(e) {
+    const g = document.getElementById('login-group');
+    if (g && !g.contains(e.target)) document.getElementById('login-menu').classList.remove('open');
+});
+function login(mode) {
+    document.getElementById('login-menu').classList.remove('open');
+    currentMode = mode;
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).then(result => {
+        const u = result.user;
+        if (mode === 'admin' && u.email !== ADMIN_EMAIL) {
+            auth.signOut(); currentMode = null; alert("Compte non autorisé en mode Admin.");
+        } else if (mode === 'guest' && u.email !== GUEST_EMAIL) {
+            auth.signOut(); currentMode = null; alert("Compte non autorisé en mode Invité.");
+        }
+    }).catch(err => alert("Erreur : " + err.message));
+}
+function logoutUser() { auth.signOut().then(() => { currentMode = null; }); }
 
 auth.onAuthStateChanged(user => {
-    const entryForm = document.querySelector('.entry-form');
-    const resetBtn = document.querySelector('.btn-reset');
-    if (user && user.email === ADMIN_EMAIL) {
-        if(entryForm) entryForm.style.display = 'flex';
-        if(resetBtn) resetBtn.style.display = 'block';
+    const entryForm   = document.querySelector('.entry-form');
+    const resetBtn    = document.querySelector('.btn-reset');
+    const loginGroup  = document.getElementById('login-group');
+    const loggedInfo  = document.getElementById('logged-user-info');
+    const loggedLabel = document.getElementById('logged-label');
+    const isAdmin = user && user.email === ADMIN_EMAIL;
+    const isGuest = user && user.email === GUEST_EMAIL;
+    if (isAdmin || isGuest) {
+        if (entryForm)   entryForm.style.display  = 'flex';
+        if (resetBtn)    resetBtn.style.display   = isAdmin ? 'block' : 'none';
+        if (loginGroup)  loginGroup.style.display = 'none';
+        if (loggedInfo)  loggedInfo.style.display = 'flex';
+        if (loggedLabel) loggedLabel.innerText    = isAdmin ? '👑 Admin' : '🎮 ' + (user.displayName||'Invité').split(' ')[0];
+        const col = isGuest ? 'bot_sessions' : 'sessions';
+        db.collection(col).orderBy('fullDate','asc').onSnapshot(snap => {
+            sessions = snap.docs.map(d => ({id:d.id,...d.data()}));
+            updateUI();
+        });
     } else {
-        if(entryForm) entryForm.style.display = 'none';
-        if(resetBtn) resetBtn.style.display = 'none';
+        if (entryForm)  entryForm.style.display  = 'none';
+        if (resetBtn)   resetBtn.style.display   = 'none';
+        if (loginGroup) loginGroup.style.display = 'block';
+        if (loggedInfo) loggedInfo.style.display = 'none';
     }
 });
 
@@ -37,9 +72,10 @@ auth.onAuthStateChanged(user => {
 let sessions = [];
 let previousBr = 0;
 
-db.collection("sessions").orderBy("fullDate", "asc").onSnapshot((snapshot) => {
-    sessions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    updateUI(); 
+// Sessions chargées dans onAuthStateChanged selon mode connecté
+// Visiteur non connecté voit les sessions en lecture seule
+db.collection("sessions").orderBy("fullDate","asc").onSnapshot(snap => {
+    if (!auth.currentUser) { sessions = snap.docs.map(d => ({id:d.id,...d.data()})); updateUI(); }
 });
 
 // --- 4. FONCTIONS UTILS ---
@@ -84,7 +120,8 @@ function addSession() {
     const ms = String(now.getMilliseconds()).padStart(3, '0');
     const uniqueFullDate = `${rawDate}T${rawTime}:${sec}.${ms}`; 
 
-    db.collection("sessions").add({
+    const col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
+    db.collection(col).add({
         date: rawDate.split('-').reverse().slice(0,2).join('/'),
         fullDate: uniqueFullDate,
         hands: hands,
@@ -100,7 +137,8 @@ function addSession() {
     });
 }
 function deleteSession(id) {
-    if(confirm("Supprimer ?")) db.collection("sessions").doc(id).delete();
+    const col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
+    if(confirm("Supprimer ?")) db.collection(col).doc(id).delete();
 }
 
 // --- 5. LOGIQUE D'AFFICHAGE ---
@@ -529,9 +567,8 @@ function animateValue(id, start, end, duration) {
 }
 
 function resetData() {
-    if(confirm("Tout supprimer ?")) {
-        db.collection("sessions").get().then((q) => q.forEach((doc) => doc.ref.delete()));
-    }
+    const col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
+    if(confirm("Tout supprimer ?")) { db.collection(col).get().then((q) => q.forEach((doc) => doc.ref.delete())); }
 }
 
 // --- 7. ANIMATIONS DE FOND ---
@@ -718,7 +755,8 @@ function importData() {
                         isoDate = `${annee}-${mois}-${jour}T${String(count).padStart(4, '0')}`;
                     }
 
-                    db.collection("sessions").add({
+                    const col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
+    db.collection(col).add({
                         date: displayDate,
                         fullDate: isoDate,
                         hands: parseInt(s.hands) || 0,
