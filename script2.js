@@ -116,6 +116,9 @@ function updateUI() {
     if (filterValue === "NL10") {
         startBR = 500;
         goalBR = 1000;
+    } else if (filterValue === "NL5") {
+        startBR = 70;
+        goalBR = 500;
     } else if (filterValue === "NL2") {
         startBR = 35;  
         goalBR = 500;  
@@ -138,6 +141,19 @@ function updateUI() {
         let matchRoom = (roomFilterValue === "ALL") || (sessionRoom === roomFilterValue);
 
         return matchStake && matchRoom;
+    });
+
+    // 👇 FILTRE GLOBAL (stake only, toutes rooms) pour bankroll + progression
+    let globalSessions = sessions.filter(s => {
+        const sessionStake = s.stake || "NL10";
+        return (filterValue === "ALL") || (sessionStake === filterValue);
+    });
+
+    // Calcul bankroll globale (toutes rooms confondues)
+    let globalProfitNet = 0; let globalRakeback = 0;
+    globalSessions.forEach(s => {
+        globalProfitNet += s.gain;
+        globalRakeback += (s.rakeback || 0);
     });
 
     let handsLabels = [0]; let profitsNet = [0];  
@@ -165,7 +181,7 @@ function updateUI() {
         profitsNet.push(parseFloat(currentProfitNet.toFixed(2)));
 
         const sessionStake = s.stake || "NL10";
-        const bbValue = (sessionStake === "NL2") ? 0.02 : 0.10;
+        const bbValue = (sessionStake === "NL2") ? 0.02 : (sessionStake === "NL5") ? 0.05 : 0.10;
         const gainBB = s.gain / bbValue;
         totalBB += gainBB;
 
@@ -232,8 +248,8 @@ function updateUI() {
 
     const brElem = document.getElementById('total-br');
     if(brElem) {
-        // Bankroll = gains de jeu + rakeback
-        const newBr = startBR + currentProfitNet + totalRakeback;
+        // Bankroll = gains de jeu + rakeback (toutes rooms confondues)
+        const newBr = startBR + globalProfitNet + globalRakeback;
         if (previousBr === 0) {
             setTimeout(() => { animateValue('total-br', startBR, newBr, 1500); }, 1200);
         } else if (Math.abs(previousBr - newBr) > 300) {
@@ -244,11 +260,15 @@ function updateUI() {
         previousBr = newBr; 
     }
 
-    // Rakeback affiché séparément
+    // Rakeback affiché uniquement en Vue Globale
     const rakebackElem = document.getElementById('total-rakeback');
+    const rakebackCard = document.getElementById('rakeback-card');
     if(rakebackElem) {
-        rakebackElem.innerText = "+" + totalRakeback.toFixed(2) + "€";
-        rakebackElem.style.color = totalRakeback > 0 ? '#a78bfa' : '#9ca3af';
+        rakebackElem.innerText = "+" + globalRakeback.toFixed(2) + "€";
+        rakebackElem.style.color = globalRakeback > 0 ? '#a78bfa' : '#9ca3af';
+    }
+    if(rakebackCard) {
+        rakebackCard.style.display = (filterValue === "ALL") ? '' : 'none';
     }
     
     document.getElementById('total-volume').innerText = totalHands.toLocaleString();
@@ -261,8 +281,8 @@ function updateUI() {
     let successRate = filteredSessions.length > 0 ? (winningSessions / filteredSessions.length) * 100 : 0;
     document.getElementById('success-rate').innerText = successRate.toFixed(1) + "%";
     
-    // Progression = gains de jeu + rakeback
-    let prog = ((currentProfitNet + totalRakeback) / (goalBR - startBR)) * 100;
+    // Progression = gains de jeu + rakeback (toutes rooms confondues)
+    let prog = ((globalProfitNet + globalRakeback) / (goalBR - startBR)) * 100;
     let displayProg = Math.min(100, Math.max(0, prog)); 
     document.getElementById('br-progression-text').innerText = displayProg.toFixed(1) + "%";
     document.getElementById('progress-bar-fill').style.width = displayProg + "%";
