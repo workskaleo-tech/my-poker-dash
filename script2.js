@@ -108,6 +108,15 @@ function updateUI() {
     const filterElem = document.getElementById('global-filter');
     const filterValue = filterElem ? filterElem.value : "ALL";
 
+    // Mise à jour du badge couleur dans le header
+    const headerBadge = document.getElementById('header-badge');
+    if (headerBadge) {
+        const badgeMap = { "ALL": ["NL", "badge-nl"], "NL2": ["NL2", "badge-nl2"], "NL5": ["NL5", "badge-nl5"], "NL10": ["NL10", "badge-nl10"] };
+        const [label, cls] = badgeMap[filterValue] || ["NL", "badge-nl"];
+        headerBadge.innerText = label;
+        headerBadge.className = "badge " + cls;
+    }
+
     // 👇 1. ON RÉCUPÈRE LE NOUVEAU FILTRE DE ROOM 👇
     const roomFilterElem = document.getElementById('room-filter');
     const roomFilterValue = roomFilterElem ? roomFilterElem.value : "ALL";

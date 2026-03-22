@@ -85,7 +85,9 @@ header { margin-bottom: 25px; }
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    align-items: center;
     justify-content: center;
+    gap: 0;
 }
 .stat-card::before {
     content: '';
@@ -103,18 +105,35 @@ header { margin-bottom: 25px; }
     letter-spacing: 1.2px;
     color: #a1a1aa;
     font-weight: 700;
-    margin-bottom: 8px;
-    display: block;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    line-height: 1.2;
+    text-align: center;
 }
 .value { 
     position: relative;
     z-index: 1;
     font-size: 1.5rem;
     font-weight: 600; 
-    margin-top: 5px; 
+    margin-top: 0;
     letter-spacing: 0.5px;
     text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    white-space: nowrap;
+    width: 100%;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
 }
+#winrate {
+    font-size: 1.35rem;
+    white-space: nowrap;
+}
+
 .stat-card:hover {
     transform: translateY(-6px);
     border-color: #3b82f6;
