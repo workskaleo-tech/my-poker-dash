@@ -15,64 +15,45 @@ const auth = firebase.auth();
 
 // --- 2. SÉCURITÉ ADMIN ---
 const ADMIN_EMAIL = "plessier.antoine10@gmail.com";
-
-const GUEST_EMAIL = "strategos.grepolis@gmail.com"; // 👈 Remplace par l'email de ton pote
-let currentMode = null;
+const GUEST_EMAIL  = "strategos.grepolis@gmail.com";
 
 function toggleLoginMenu() {
-    document.getElementById('login-menu').classList.toggle('open');
+    const m = document.getElementById("login-menu");
+    if (m) m.classList.toggle("open");
 }
-document.addEventListener('click', function(e) {
-    const g = document.getElementById('login-group');
-    if (g && !g.contains(e.target)) { const m = document.getElementById('login-menu'); if(m) m.classList.remove('open'); }
+document.addEventListener("click", function(e) {
+    const g = document.getElementById("login-group");
+    const m = document.getElementById("login-menu");
+    if (g && m && !g.contains(e.target)) m.classList.remove("open");
 });
-function login(mode) {
-    const m = document.getElementById('login-menu'); if(m) m.classList.remove('open');
-    currentMode = mode;
-    sessionStorage.setItem('loginMode', mode);
+function login() {
+    const m = document.getElementById("login-menu"); if(m) m.classList.remove("open");
     const provider = new firebase.auth.GoogleAuthProvider();
-    // signInWithRedirect évite les erreurs Cross-Origin-Opener-Policy
-    auth.signInWithRedirect(provider).catch(err => alert("Erreur : " + err.message));
+    auth.signInWithPopup(provider).catch(err => {
+        if (err.code !== "auth/popup-closed-by-user") alert("Erreur : " + err.message);
+    });
 }
-function logoutUser() { auth.signOut().then(() => { currentMode = null; sessionStorage.removeItem('loginMode'); }); }
-
-// Récupère le résultat du redirect au retour sur la page
-auth.getRedirectResult().then(result => {
-    if (!result || !result.user) return;
-    const u = result.user;
-    const mode = sessionStorage.getItem('loginMode') || currentMode;
-    if (mode === 'admin' && u.email !== ADMIN_EMAIL) {
-        auth.signOut(); sessionStorage.removeItem('loginMode'); alert("Compte non autorisé en mode Admin.");
-    } else if (mode === 'guest' && u.email !== GUEST_EMAIL) {
-        auth.signOut(); sessionStorage.removeItem('loginMode'); alert("Compte non autorisé en mode Invité.");
-    }
-}).catch(err => console.warn("Redirect result:", err.message));
+function loginGuest() {
+    const m = document.getElementById("login-menu"); if(m) m.classList.remove("open");
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ login_hint: GUEST_EMAIL });
+    auth.signInWithPopup(provider).catch(err => {
+        if (err.code !== "auth/popup-closed-by-user") alert("Erreur : " + err.message);
+    });
+}
 
 auth.onAuthStateChanged(user => {
-    const entryForm  = document.querySelector('.entry-form');
-    const resetBtn   = document.querySelector('.btn-reset');
-    const loginGroup = document.getElementById('login-group');
-    const loggedInfo = document.getElementById('logged-user-info');
-    const loggedLabel= document.getElementById('logged-label');
-    const isAdmin = user && user.email === ADMIN_EMAIL;
-    const isGuest = user && user.email === GUEST_EMAIL;
-
-    if (isAdmin || isGuest) {
-        if (entryForm)  entryForm.style.display  = 'flex';
-        if (resetBtn)   resetBtn.style.display   = isAdmin ? 'block' : 'none';
-        if (loginGroup) loginGroup.style.display = 'none';
-        if (loggedInfo) loggedInfo.style.display = 'flex';
-        if (loggedLabel) loggedLabel.innerText   = isAdmin ? '👑 Admin' : '🎮 ' + (user.displayName||'Invité').split(' ')[0];
-        const col = isGuest ? 'bot_sessions' : 'sessions';
-        db.collection(col).orderBy('fullDate','asc').onSnapshot(snap => {
-            sessions = snap.docs.map(d => ({id:d.id,...d.data()}));
-            updateUI();
-        });
+    const entryForm = document.querySelector('.entry-form');
+    const resetBtn = document.querySelector('.btn-reset');
+    if (user && user.email === ADMIN_EMAIL) {
+        if(entryForm) entryForm.style.display = 'flex';
+        if(resetBtn) resetBtn.style.display = 'block';
+    } else if (user && user.email === GUEST_EMAIL) {
+        if(entryForm) entryForm.style.display = 'flex';
+        if(resetBtn) resetBtn.style.display = 'none';
     } else {
-        if (entryForm)  entryForm.style.display  = 'none';
-        if (resetBtn)   resetBtn.style.display   = 'none';
-        if (loginGroup) loginGroup.style.display = 'block';
-        if (loggedInfo) loggedInfo.style.display = 'none';
+        if(entryForm) entryForm.style.display = 'none';
+        if(resetBtn) resetBtn.style.display = 'none';
     }
 });
 
@@ -127,8 +108,7 @@ function addSession() {
     const ms = String(now.getMilliseconds()).padStart(3, '0');
     const uniqueFullDate = `${rawDate}T${rawTime}:${sec}.${ms}`; 
 
-    const _col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
-    db.collection(_col).add({
+    db.collection("sessions").add({
         date: rawDate.split('-').reverse().slice(0,2).join('/'),
         fullDate: uniqueFullDate,
         hands: hands,
@@ -144,8 +124,7 @@ function addSession() {
     });
 }
 function deleteSession(id) {
-    const _col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
-    if(confirm("Supprimer ?")) db.collection(_col).doc(id).delete();
+    if(confirm("Supprimer ?")) db.collection("sessions").doc(id).delete();
 }
 
 // --- 5. LOGIQUE D'AFFICHAGE ---
@@ -219,7 +198,7 @@ function updateUI() {
 
     const historyBody = document.getElementById('history-list');
     const user = auth.currentUser;
-    const isAntoine = user && user.email === ADMIN_EMAIL;
+    const isAntoine = user && (user.email === ADMIN_EMAIL || user.email === GUEST_EMAIL);
     let rows = [];
 
     filteredSessions.forEach((s) => { 
@@ -362,7 +341,6 @@ const neonLinePlugin = {
     
     afterDatasetsDraw(chart, args, options) {
         const { ctx, scales: { x, y } } = chart;
-        if (!ctx || !chart.canvas) return; // Guard null canvas
         const datasetMeta = chart.getDatasetMeta(0);
         const points = datasetMeta.data;
 
@@ -575,8 +553,9 @@ function animateValue(id, start, end, duration) {
 }
 
 function resetData() {
-    const _col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
-    if(confirm("Tout supprimer ?")) { db.collection(_col).get().then((q) => q.forEach(doc => doc.ref.delete())); }
+    if(confirm("Tout supprimer ?")) {
+        db.collection("sessions").get().then((q) => q.forEach((doc) => doc.ref.delete()));
+    }
 }
 
 // --- 7. ANIMATIONS DE FOND ---
@@ -763,8 +742,7 @@ function importData() {
                         isoDate = `${annee}-${mois}-${jour}T${String(count).padStart(4, '0')}`;
                     }
 
-                    const _col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
-    db.collection(_col).add({
+                    db.collection("sessions").add({
                         date: displayDate,
                         fullDate: isoDate,
                         hands: parseInt(s.hands) || 0,
