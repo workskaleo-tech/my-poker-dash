@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot — Reads Adversaires</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: #0a0a0f;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── HEADER ── */
+        .bot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 28px;
+            background: linear-gradient(90deg, rgba(167,139,250,0.08), transparent);
+            border-bottom: 1px solid rgba(167,139,250,0.2);
+            flex-wrap: wrap;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .bot-title-group { display:flex; flex-direction:column; gap:3px; }
+        .bot-title { font-size:1.2rem; font-weight:800; color:#fff; letter-spacing:0.5px; }
+        .bot-subtitle { font-size:0.68rem; color:#555; font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+        .bot-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+        /* ── LOGIN SCREEN ── */
+        #login-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            padding: 40px;
+        }
+        .spy-icon { font-size: 5rem; filter: drop-shadow(0 0 20px rgba(167,139,250,0.5)); }
+        .login-title { font-size: 1.5rem; font-weight: 800; color: #fff; }
+        .login-sub { font-size: 0.85rem; color: #555; text-align: center; max-width: 300px; line-height: 1.6; }
+        .btn-google-login {
+            background: rgba(167,139,250,0.12);
+            border: 1px solid rgba(167,139,250,0.5);
+            color: #a78bfa;
+            padding: 12px 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-google-login:hover {
+            background: rgba(167,139,250,0.25);
+            border-color: #a78bfa;
+            box-shadow: 0 0 20px rgba(167,139,250,0.3);
+            transform: translateY(-1px);
+        }
+        #error-msg { color: #ff5555; font-size: 0.82rem; font-weight: 600; display:none; }
+
+        /* ── MAIN CONTENT ── */
+        #main-content { display:none; flex:1; overflow:hidden; flex-direction:column; }
+
+        /* ── BUTTONS ── */
+        .btn-action {
+            background: rgba(167,139,250,0.1);
+            border: 1px solid rgba(167,139,250,0.4);
+            color: #a78bfa;
+            padding: 7px 13px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 0.78rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-action:hover { background:rgba(167,139,250,0.22); border-color:#a78bfa; }
+        .btn-danger {
+            background: rgba(255,85,85,0.1);
+            border-color: rgba(255,85,85,0.4);
+            color: #ff5555;
+        }
+        .btn-danger:hover { background:rgba(255,85,85,0.2); border-color:#ff5555; }
+        .user-badge { color:#a78bfa; font-size:0.8rem; font-weight:600; }
+
+        /* ── INNER ── */
+        .bot-inner {
+            flex:1; overflow-y:auto; padding:22px 28px;
+            display:flex; flex-direction:column; gap:16px;
+        }
+
+        /* ── FILTERS ── */
+        .bot-filters { display:flex; gap:10px; flex-wrap:wrap; }
+        .bot-search {
+            flex:1; min-width:200px;
+            background:rgba(255,255,255,0.05);
+            border:1px solid #2a2a2a;
+            border-radius:8px;
+            padding:9px 14px;
+            color:#fff;
+            font-family:'Montserrat',sans-serif;
+            font-size:0.85rem;
+            outline:none;
+            transition:border-color 0.2s;
+        }
+        .bot-search:focus { border-color:rgba(167,139,250,0.5); }
+        .bot-sort {
+            background:rgba(255,255,255,0.05);
+            border:1px solid #2a2a2a;
+            border-radius:8px;
+            padding:9px 14px;
+            color:#fff;
+            font-family:'Montserrat',sans-serif;
+            font-size:0.85rem;
+            cursor:pointer;
+            outline:none;
+        }
+
+        /* ── STATS GRID ── */
+        .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+        .stat-card {
+            background:linear-gradient(145deg,rgba(35,35,35,0.9),rgba(20,20,20,0.9));
+            border:1px solid #2a2a2a;
+            border-top:2px solid rgba(167,139,250,0.5);
+            border-radius:10px;
+            padding:14px;
+            text-align:center;
+            display:flex; flex-direction:column; align-items:center; gap:5px;
+        }
+        .stat-card small { font-size:0.62rem; text-transform:uppercase; letter-spacing:1px; color:#555; font-weight:700; }
+        .stat-value { font-size:1.4rem; font-weight:800; color:#a78bfa; white-space:nowrap; }
+
+        /* ── TABLE ── */
+        .table-wrap {
+            background:rgba(10,10,15,0.95);
+            border:1px solid #1e1e2a;
+            border-radius:12px;
+            overflow:auto;
+            flex:1;
+        }
+        table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+        thead tr { background:rgba(167,139,250,0.07); border-bottom:1px solid #1e1e2a; position:sticky; top:0; z-index:2; }
+        th { padding:11px 14px; color:#a78bfa; font-weight:700; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.8px; white-space:nowrap; }
+        th[title] { cursor:help; text-decoration:underline dotted rgba(167,139,250,0.4); }
+        tbody tr { border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.15s; }
+        tbody tr:hover { background:rgba(167,139,250,0.05); }
+        td { padding:9px 14px; white-space:nowrap; }
+
+        .btn-del {
+            background:rgba(255,85,85,0.1);
+            border:1px solid rgba(255,85,85,0.3);
+            color:#ff5555;
+            border-radius:4px;
+            width:24px; height:24px;
+            cursor:pointer;
+            font-size:0.7rem;
+            transition:all 0.2s;
+        }
+        .btn-del:hover { background:rgba(255,85,85,0.25); }
+
+        /* ── CANVAS PARTICLES ── */
+        #particle-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        #login-screen { position: relative; overflow: hidden; }
+        #login-screen > *:not(#particle-canvas) { position: relative; z-index: 1; }
+
+        @media(max-width:768px) {
+            .stats-grid { grid-template-columns:repeat(2,1fr); }
+            .bot-inner { padding:14px; }
+            .bot-header { padding:12px 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <div class="bot-header">
+        <div class="bot-title-group">
+            <span class="bot-title">🤖 Bot — Reads Adversaires</span>
+            <span class="bot-subtitle">Stats collectées automatiquement</span>
+        </div>
+        <div class="bot-actions" id="header-actions">
+            <!-- rempli dynamiquement après login -->
+        </div>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen">
+        <canvas id="particle-canvas"></canvas>
+        <div class="spy-icon">🕵️</div>
+        <div class="bot-title-group" style="align-items:center;">
+            <span class="login-title">Accès Bot</span>
+            <span class="login-sub">Connecte-toi avec le compte autorisé pour accéder aux reads adversaires.</span>
+        </div>
+        <button class="btn-google-login" onclick="doLogin()">
+            <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 6.294C4.672 4.169 6.656 3.58 9 3.58z"/></svg>
+            Se connecter avec Google
+        </button>
+        <span id="error-msg">❌ Accès refusé — compte non autorisé.</span>
+    </div>
+
+    <!-- MAIN CONTENT (après login) -->
+    <div id="main-content">
+        <div class="bot-inner">
+            <div class="bot-filters">
+                <input type="text" id="bot-search" class="bot-search" placeholder="🔍 Rechercher un joueur..." oninput="renderTable()">
+                <select id="bot-sort" class="bot-sort" onchange="renderTable()">
+                    <option value="vpip_desc">VPIP ↓</option>
+                    <option value="pfr_desc">PFR ↓</option>
+                    <option value="threebet_desc">3Bet ↓</option>
+                    <option value="af_desc">AF ↓</option>
+                    <option value="hands_desc">Mains ↓</option>
+                    <option value="name_asc">Nom A→Z</option>
+                </select>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card"><small>👥 Joueurs trackés</small><div class="stat-value" id="s-players">0</div></div>
+                <div class="stat-card"><small>🃏 Mains totales</small><div class="stat-value" id="s-hands">0</div></div>
+                <div class="stat-card"><small>🐟 VPIP moyen</small><div class="stat-value" id="s-vpip">0%</div></div>
+                <div class="stat-card"><small>🔫 3Bet moyen</small><div class="stat-value" id="s-3bet">0%</div></div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead><tr>
+                        <th>Joueur</th><th>Mains</th>
+                        <th title="Voluntarily Put $ In Pot">VPIP</th>
+                        <th title="Pre-Flop Raise">PFR</th>
+                        <th title="3-Bet %">3Bet</th>
+                        <th title="Fold to 3Bet">F/3B</th>
+                        <th title="4-Bet %">4Bet</th>
+                        <th title="Continuation Bet">CBet</th>
+                        <th title="Fold to CBet">F/CB</th>
+                        <th title="Fold to Steal">F/St</th>
+                        <th title="Aggression Factor">AF</th>
+                        <th id="col-action" style="display:none;"></th>
+                    </tr></thead>
+                    <tbody id="bot-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCQRX7XFYsFqHtPglFPPfvkFaswXc2vewc",
+            authDomain: "pokerstats-caaa8.firebaseapp.com",
+            projectId: "pokerstats-caaa8",
+            storageBucket: "pokerstats-caaa8.firebasestorage.app",
+            messagingSenderId: "1090382764377",
+            appId: "1:1090382764377:web:8c6b75d35248f7d1d89448"
+        };
+
+        // ⚠️ Firebase déjà initialisé si on vient du même domaine — on réutilise
+        let app;
+        try { app = firebase.app(); } catch(e) { app = firebase.initializeApp(firebaseConfig); }
+        const db   = firebase.firestore();
+        const auth = firebase.auth();
+
+        const ADMIN_EMAIL = "plessier.antoine10@gmail.com";
+        const BOT_EMAIL   = "TON_POTE@gmail.com"; // 👈 Remplace par l'email de ton pote
+
+        let players = [];
+        let currentUser = null;
+
+        function doLogin() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).then(result => {
+                const u = result.user;
+                if (u.email === BOT_EMAIL || u.email === ADMIN_EMAIL) {
+                    onLoggedIn(u);
+                } else {
+                    auth.signOut();
+                    document.getElementById('error-msg').style.display = 'block';
+                }
+            }).catch(err => alert("Erreur : " + err.message));
+        }
+
+        function onLoggedIn(u) {
+            currentUser = u;
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'flex';
+            document.getElementById('col-action').style.display = '';
+
+            // Header actions
+            document.getElementById('header-actions').innerHTML = `
+                <span class="user-badge">✅ ${u.displayName}</span>
+                <label class="btn-action" style="cursor:pointer;">
+                    📂 Importer CSV/JSON
+                    <input type="file" accept=".csv,.json" onchange="importFile(event)" style="display:none;">
+                </label>
+                <button class="btn-action btn-danger" onclick="clearAll()">🗑 Vider</button>
+                <button class="btn-action" onclick="auth.signOut().then(()=>location.reload())" style="color:#888;border-color:#333;background:transparent;">Déconnexion</button>
+            `;
+
+            // Load data
+            db.collection("bot_players").onSnapshot(snap => {
+                players = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderTable();
+                updateStats();
+            });
+        }
+
+        // Auto-login si déjà connecté
+        auth.onAuthStateChanged(u => {
+            if (u && (u.email === BOT_EMAIL || u.email === ADMIN_EMAIL)) {
+                onLoggedIn(u);
+            }
+        });
+
+        function importFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data = [];
+                    if (file.name.endsWith('.json')) {
+                        data = JSON.parse(e.target.result);
+                    } else {
+                        const lines = e.target.result.trim().split('\n');
+                        const headers = lines[0].split(',').map(h => h.trim().toLowerCase()
+                            .replace(/fold to 3.?bet/i,'fold_3bet').replace(/fold to c.?bet/i,'fold_cbet')
+                            .replace(/fold to steal/i,'fold_steal').replace(/3.?bet/i,'threebet')
+                            .replace(/4.?bet/i,'fourbet').replace(/c.?bet/i,'cbet')
+                            .replace(/hands|mains/i,'hands').replace(/player|joueur|pseudo/i,'name'));
+                        for (let i = 1; i < lines.length; i++) {
+                            if (!lines[i].trim()) continue;
+                            const vals = lines[i].split(',').map(v => v.trim());
+                            const obj = {};
+                            headers.forEach((h,idx) => { obj[h] = isNaN(vals[idx]) ? vals[idx] : parseFloat(vals[idx])||0; });
+                            data.push(obj);
+                        }
+                    }
+                    const batch = db.batch();
+                    data.forEach(p => {
+                        if (!p.name) return;
+                        batch.set(db.collection("bot_players").doc(), {
+                            name:p.name||'?', hands:p.hands||0, vpip:p.vpip||0, pfr:p.pfr||0,
+                            threebet:p.threebet||0, fold_3bet:p.fold_3bet||0, fourbet:p.fourbet||0,
+                            cbet:p.cbet||0, fold_cbet:p.fold_cbet||0, fold_steal:p.fold_steal||0,
+                            af:p.af||0, updatedAt:new Date().toISOString()
+                        });
+                    });
+                    batch.commit().then(() => alert(`✅ ${data.length} joueur(s) importé(s) !`));
+                } catch(err) { alert("Erreur d'import : " + err.message); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function clearAll() {
+            if (!confirm("Supprimer TOUS les joueurs ?")) return;
+            db.collection("bot_players").get().then(snap => {
+                const batch = db.batch();
+                snap.docs.forEach(d => batch.delete(d.ref));
+                return batch.commit();
+            }).then(() => alert("✅ Données vidées."));
+        }
+
+        function deletePlayer(id) {
+            if (confirm("Supprimer ce joueur ?")) db.collection("bot_players").doc(id).delete();
+        }
+
+        function updateStats() {
+            document.getElementById('s-players').innerText = players.length;
+            const th = players.reduce((s,p)=>s+(p.hands||0),0);
+            document.getElementById('s-hands').innerText = th.toLocaleString();
+            const el = players.filter(p=>p.hands>=20);
+            const av = el.length ? el.reduce((s,p)=>s+(p.vpip||0),0)/el.length : 0;
+            const a3 = el.length ? el.reduce((s,p)=>s+(p.threebet||0),0)/el.length : 0;
+            document.getElementById('s-vpip').innerText = av.toFixed(1)+'%';
+            document.getElementById('s-3bet').innerText = a3.toFixed(1)+'%';
+        }
+
+        function renderTable() {
+            const search = (document.getElementById('bot-search')?.value||'').toLowerCase();
+            const sort   = document.getElementById('bot-sort')?.value||'vpip_desc';
+            let filtered = players.filter(p => p.name && p.name.toLowerCase().includes(search));
+            const [field,dir] = sort.split('_');
+            const km = {vpip:'vpip',pfr:'pfr',threebet:'threebet',af:'af',hands:'hands',name:'name'};
+            const key = km[field]||'vpip';
+            filtered.sort((a,b) => key==='name'
+                ? (dir==='asc'?a.name.localeCompare(b.name):b.name.localeCompare(a.name))
+                : (dir==='desc'?(b[key]||0)-(a[key]||0):(a[key]||0)-(b[key]||0)));
+
+            const tbody = document.getElementById('bot-tbody');
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#555;padding:40px;">Aucun joueur — importe un fichier CSV/JSON</td></tr>`;
+                return;
+            }
+            const c = (val,fn,sfx='%') => val>0
+                ? `<td style="color:${fn(val)};font-weight:600;">${val.toFixed(1)}${sfx}</td>`
+                : `<td style="color:#333;">—</td>`;
+            const cv = v=>v>=35?'#ff5555':v>=25?'#f59e0b':'#4ade80';
+            const cp = v=>v>=25?'#ff5555':v>=15?'#f59e0b':'#4ade80';
+            const c3 = v=>v>=12?'#ff5555':v>=7?'#f59e0b':'#4ade80';
+            const cf = v=>v>=70?'#4ade80':v>=50?'#f59e0b':'#ff5555';
+            const ca = v=>v>=4?'#ff5555':v>=2?'#f59e0b':'#4ade80';
+            const cc = v=>v>=75?'#ff5555':v>=55?'#f59e0b':'#4ade80';
+            const ch = v=>v>=100?'#4ade80':v>=30?'#f59e0b':'#888';
+            tbody.innerHTML = filtered.map(p=>`
+                <tr>
+                    <td style="font-weight:700;color:#fff;">${p.name}</td>
+                    <td style="color:${ch(p.hands||0)};font-weight:600;">${(p.hands||0).toLocaleString()}</td>
+                    ${c(p.vpip||0,cv)}${c(p.pfr||0,cp)}${c(p.threebet||0,c3)}
+                    ${c(p.fold_3bet||0,cf)}${c(p.fourbet||0,v=>v>=5?'#ff5555':v>=3?'#f59e0b':'#4ade80')}
+                    ${c(p.cbet||0,cc)}${c(p.fold_cbet||0,cf)}${c(p.fold_steal||0,cf)}${c(p.af||0,ca,'')}
+                    <td><button class="btn-del" onclick="deletePlayer('${p.id}')">✕</button></td>
+                </tr>`).join('');
+        }
+        // ── PARTICLE NETWORK ──
+        (function() {
+            const canvas = document.getElementById('particle-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            let W, H, particles, animId;
+
+            const CONFIG = {
+                count: 160,
+                color: '167,139,250',
+                maxDist: 110,
+                speed: 0.35,
+                dotRadius: 1.8,
+            };
+
+            function resize() {
+                const screen = document.getElementById('login-screen');
+                W = canvas.width  = screen.offsetWidth;
+                H = canvas.height = screen.offsetHeight;
+            }
+
+            function Particle() {
+                this.x = Math.random() * W;
+                this.y = Math.random() * H;
+                this.vx = (Math.random() - 0.5) * CONFIG.speed;
+                this.vy = (Math.random() - 0.5) * CONFIG.speed;
+                this.r = CONFIG.dotRadius + Math.random() * 1.2;
+            }
+
+            function init() {
+                resize();
+                particles = Array.from({length: CONFIG.count}, () => new Particle());
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, W, H);
+
+                // Draw lines
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist < CONFIG.maxDist) {
+                            const alpha = (1 - dist / CONFIG.maxDist) * 0.5;
+                            ctx.beginPath();
+                            ctx.strokeStyle = `rgba(${CONFIG.color},${alpha})`;
+                            ctx.lineWidth = 0.8;
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+
+                // Draw dots
+                particles.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${CONFIG.color},0.7)`;
+                    ctx.shadowColor = `rgba(${CONFIG.color},0.8)`;
+                    ctx.shadowBlur = 6;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                });
+            }
+
+            function update() {
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.x < 0 || p.x > W) p.vx *= -1;
+                    if (p.y < 0 || p.y > H) p.vy *= -1;
+                });
+            }
+
+            function loop() {
+                update();
+                draw();
+                animId = requestAnimationFrame(loop);
+            }
+
+            // Stop animation when login screen hides
+            const observer = new MutationObserver(() => {
+                const screen = document.getElementById('login-screen');
+                if (screen.style.display === 'none') {
+                    cancelAnimationFrame(animId);
+                } else {
+                    resize();
+                    loop();
+                }
+            });
+            observer.observe(document.getElementById('login-screen'), { attributes: true, attributeFilter: ['style'] });
+
+            window.addEventListener('resize', () => { resize(); });
+
+            // Start
+            init();
+            loop();
+        })();
+
+    </script>
+</body>
+</html>
