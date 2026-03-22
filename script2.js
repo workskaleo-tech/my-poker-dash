@@ -15,68 +15,85 @@ const auth = firebase.auth();
 
 // --- 2. SÉCURITÉ ADMIN ---
 const ADMIN_EMAIL = "plessier.antoine10@gmail.com";
-const GUEST_EMAIL  = "strategos.grepolis@gmail.com"; // Remplace par email de ton pote
-
-let currentMode = null;
+const GUEST_EMAIL  = "strategos.grepolis@gmail.com"; // 👈 Remplace par l'email de ton pote
+let unsubscribeListener = null; // Garde une ref au listener actif
 
 function toggleLoginMenu() {
     document.getElementById('login-menu').classList.toggle('open');
 }
 document.addEventListener('click', function(e) {
     const g = document.getElementById('login-group');
-    if (g && !g.contains(e.target)) document.getElementById('login-menu').classList.remove('open');
+    if (g && !g.contains(e.target)) {
+        const m = document.getElementById('login-menu');
+        if (m) m.classList.remove('open');
+    }
 });
 function login(mode) {
-    document.getElementById('login-menu').classList.remove('open');
-    currentMode = mode;
+    const m = document.getElementById('login-menu');
+    if (m) m.classList.remove('open');
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).then(result => {
         const u = result.user;
         if (mode === 'admin' && u.email !== ADMIN_EMAIL) {
-            auth.signOut(); currentMode = null; alert("Compte non autorisé en mode Admin.");
+            auth.signOut(); alert("Compte non autorisé en mode Admin.");
         } else if (mode === 'guest' && u.email !== GUEST_EMAIL) {
-            auth.signOut(); currentMode = null; alert("Compte non autorisé en mode Invité.");
+            auth.signOut(); alert("Compte non autorisé en mode Invité.");
         }
     }).catch(err => alert("Erreur : " + err.message));
 }
-function logoutUser() { auth.signOut().then(() => { currentMode = null; }); }
+function logoutUser() {
+    if (unsubscribeListener) { unsubscribeListener(); unsubscribeListener = null; }
+    sessions = []; previousBr = 0;
+    auth.signOut();
+}
 
 auth.onAuthStateChanged(user => {
+    // Coupe l'ancien écouteur avant d'en créer un nouveau
+    if (unsubscribeListener) { unsubscribeListener(); unsubscribeListener = null; }
+
     const entryForm   = document.querySelector('.entry-form');
     const resetBtn    = document.querySelector('.btn-reset');
     const loginGroup  = document.getElementById('login-group');
     const loggedInfo  = document.getElementById('logged-user-info');
     const loggedLabel = document.getElementById('logged-label');
+
     const isAdmin = user && user.email === ADMIN_EMAIL;
     const isGuest = user && user.email === GUEST_EMAIL;
+
     if (isAdmin || isGuest) {
         if (entryForm)   entryForm.style.display  = 'flex';
         if (resetBtn)    resetBtn.style.display   = isAdmin ? 'block' : 'none';
         if (loginGroup)  loginGroup.style.display = 'none';
         if (loggedInfo)  loggedInfo.style.display = 'flex';
-        if (loggedLabel) loggedLabel.innerText    = isAdmin ? '👑 Admin' : '🎮 ' + (user.displayName||'Invité').split(' ')[0];
-        const col = isGuest ? 'bot_sessions' : 'sessions';
-        db.collection(col).orderBy('fullDate','asc').onSnapshot(snap => {
-            sessions = snap.docs.map(d => ({id:d.id,...d.data()}));
-            updateUI();
-        });
+        if (loggedLabel) loggedLabel.innerText    = isAdmin ? '👑 Admin' : '🎮 ' + (user.displayName || 'Invité').split(' ')[0];
     } else {
         if (entryForm)  entryForm.style.display  = 'none';
         if (resetBtn)   resetBtn.style.display   = 'none';
         if (loginGroup) loginGroup.style.display = 'block';
         if (loggedInfo) loggedInfo.style.display = 'none';
+        sessions = []; previousBr = 0; updateUI();
+    }
+
+    // Lance UN SEUL écouteur sur la bonne collection
+    if (isAdmin || isGuest) {
+        const col = isGuest ? 'bot_sessions' : 'sessions';
+        unsubscribeListener = db.collection(col).orderBy('fullDate','asc').onSnapshot(snap => {
+            sessions = snap.docs.map(d => ({id:d.id,...d.data()}));
+            updateUI();
+        }, err => console.warn('Firestore listener:', err.message));
+    } else {
+        // Visiteur non connecté — lecture seule sur sessions publiques
+        unsubscribeListener = db.collection('sessions').orderBy('fullDate','asc').onSnapshot(snap => {
+            sessions = snap.docs.map(d => ({id:d.id,...d.data()}));
+            updateUI();
+        });
     }
 });
 
 // --- 3. VARIABLES ET SYNCHRO ---
 let sessions = [];
 let previousBr = 0;
-
-// Sessions chargées dans onAuthStateChanged selon mode connecté
-// Visiteur non connecté voit les sessions en lecture seule
-db.collection("sessions").orderBy("fullDate","asc").onSnapshot(snap => {
-    if (!auth.currentUser) { sessions = snap.docs.map(d => ({id:d.id,...d.data()})); updateUI(); }
-});
+// L'écouteur est géré dans onAuthStateChanged — une seule collection active à la fois
 
 // --- 4. FONCTIONS UTILS ---
 function setTodayDate() {
@@ -568,7 +585,7 @@ function animateValue(id, start, end, duration) {
 
 function resetData() {
     const col = (auth.currentUser && auth.currentUser.email === GUEST_EMAIL) ? "bot_sessions" : "sessions";
-    if(confirm("Tout supprimer ?")) { db.collection(col).get().then((q) => q.forEach((doc) => doc.ref.delete())); }
+    if(confirm("Tout supprimer ?")) { db.collection(col).get().then(q => q.forEach(doc => doc.ref.delete())); }
 }
 
 // --- 7. ANIMATIONS DE FOND ---
