@@ -46,7 +46,15 @@
             gap: 24px;
             padding: 40px;
         }
-        .spy-icon { font-size: 5rem; filter: drop-shadow(0 0 20px rgba(167,139,250,0.5)); }
+        .spy-icon {
+            font-size: 5rem;
+            animation: spyPulse 2.5s ease-in-out infinite;
+            display: inline-block;
+        }
+        @keyframes spyPulse {
+            0%,100% { filter: drop-shadow(0 0 10px rgba(167,139,250,0.3)); transform: scale(1); }
+            50%      { filter: drop-shadow(0 0 30px rgba(167,139,250,1)) drop-shadow(0 0 60px rgba(167,139,250,0.5)); transform: scale(1.08); }
+        }
         .login-title { font-size: 1.5rem; font-weight: 800; color: #fff; }
         .login-sub { font-size: 0.85rem; color: #555; text-align: center; max-width: 300px; line-height: 1.6; }
         .btn-google-login {
@@ -433,55 +441,58 @@
                     <td><button class="btn-del" onclick="deletePlayer('${p.id}')">✕</button></td>
                 </tr>`).join('');
         }
-        // ── PARTICLE NETWORK ──
+        // ── PARTICLE NETWORK ANIMATION ──
         (function() {
             const canvas = document.getElementById('particle-canvas');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
-
             let W, H, particles, animId;
 
-            const CONFIG = {
-                count: 160,
-                color: '167,139,250',
-                maxDist: 110,
-                speed: 0.35,
-                dotRadius: 1.8,
-            };
+            const COLOR = '167,139,250';
+            const COUNT = 130;
+            const MAX_DIST = 120;
+            const SPEED = 0.35;
 
             function resize() {
-                const screen = document.getElementById('login-screen');
-                W = canvas.width  = screen.offsetWidth;
-                H = canvas.height = screen.offsetHeight;
+                const el = document.getElementById('login-screen');
+                W = canvas.width  = el.offsetWidth  || window.innerWidth;
+                H = canvas.height = el.offsetHeight || window.innerHeight;
             }
 
-            function Particle() {
-                this.x = Math.random() * W;
-                this.y = Math.random() * H;
-                this.vx = (Math.random() - 0.5) * CONFIG.speed;
-                this.vy = (Math.random() - 0.5) * CONFIG.speed;
-                this.r = CONFIG.dotRadius + Math.random() * 1.2;
-            }
-
-            function init() {
-                resize();
-                particles = Array.from({length: CONFIG.count}, () => new Particle());
+            // Répartition uniforme en grille avec jitter aléatoire
+            function initParticles() {
+                particles = [];
+                const cols = Math.ceil(Math.sqrt(COUNT * W / H));
+                const rows = Math.ceil(COUNT / cols);
+                const cw = W / cols;
+                const ch = H / rows;
+                for (let r = 0; r < rows && particles.length < COUNT; r++) {
+                    for (let c = 0; c < cols && particles.length < COUNT; c++) {
+                        particles.push({
+                            x:  cw * c + cw * 0.15 + Math.random() * cw * 0.7,
+                            y:  ch * r + ch * 0.15 + Math.random() * ch * 0.7,
+                            vx: (Math.random() - 0.5) * SPEED,
+                            vy: (Math.random() - 0.5) * SPEED,
+                            r:  1.5 + Math.random() * 1.2,
+                        });
+                    }
+                }
             }
 
             function draw() {
                 ctx.clearRect(0, 0, W, H);
 
-                // Draw lines
+                // Lignes de connexion
                 for (let i = 0; i < particles.length; i++) {
                     for (let j = i + 1; j < particles.length; j++) {
-                        const dx = particles[i].x - particles[j].x;
-                        const dy = particles[i].y - particles[j].y;
-                        const dist = Math.sqrt(dx*dx + dy*dy);
-                        if (dist < CONFIG.maxDist) {
-                            const alpha = (1 - dist / CONFIG.maxDist) * 0.5;
+                        const dx   = particles[i].x - particles[j].x;
+                        const dy   = particles[i].y - particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < MAX_DIST) {
+                            const alpha = (1 - dist / MAX_DIST) * 0.45;
                             ctx.beginPath();
-                            ctx.strokeStyle = `rgba(${CONFIG.color},${alpha})`;
-                            ctx.lineWidth = 0.8;
+                            ctx.strokeStyle = `rgba(${COLOR},${alpha})`;
+                            ctx.lineWidth   = 0.7;
                             ctx.moveTo(particles[i].x, particles[i].y);
                             ctx.lineTo(particles[j].x, particles[j].y);
                             ctx.stroke();
@@ -489,15 +500,15 @@
                     }
                 }
 
-                // Draw dots
+                // Points
                 particles.forEach(p => {
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(${CONFIG.color},0.7)`;
-                    ctx.shadowColor = `rgba(${CONFIG.color},0.8)`;
-                    ctx.shadowBlur = 6;
+                    ctx.fillStyle    = `rgba(${COLOR},0.8)`;
+                    ctx.shadowColor  = `rgba(${COLOR},0.9)`;
+                    ctx.shadowBlur   = 5;
                     ctx.fill();
-                    ctx.shadowBlur = 0;
+                    ctx.shadowBlur   = 0;
                 });
             }
 
@@ -516,25 +527,28 @@
                 animId = requestAnimationFrame(loop);
             }
 
-            // Stop animation when login screen hides
+            function start() {
+                resize();
+                initParticles();
+                loop();
+            }
+
+            function stop() {
+                if (animId) cancelAnimationFrame(animId);
+            }
+
+            // Stop quand login screen se cache
             const observer = new MutationObserver(() => {
-                const screen = document.getElementById('login-screen');
-                if (screen.style.display === 'none') {
-                    cancelAnimationFrame(animId);
-                } else {
-                    resize();
-                    loop();
-                }
+                const s = document.getElementById('login-screen');
+                if (s && s.style.display === 'none') stop();
             });
-            observer.observe(document.getElementById('login-screen'), { attributes: true, attributeFilter: ['style'] });
+            const screen = document.getElementById('login-screen');
+            if (screen) observer.observe(screen, { attributes: true, attributeFilter: ['style'] });
 
-            window.addEventListener('resize', () => { resize(); });
+            window.addEventListener('resize', () => { resize(); initParticles(); });
 
-            // Start
-            init();
-            loop();
+            start();
         })();
-
     </script>
 </body>
 </html>
