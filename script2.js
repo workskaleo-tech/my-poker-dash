@@ -17,9 +17,22 @@ const auth = firebase.auth();
 const ADMIN_EMAIL = "plessier.antoine10@gmail.com";
 const GUEST_EMAIL  = "strategos.grepolis@gmail.com";
 
-function login() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => alert("Erreur : " + err.message));
+function toggleLoginMenu() {
+    var m = document.getElementById("login-menu");
+    if (m) m.classList.toggle("open");
+}
+document.addEventListener("click", function(e) {
+    var g = document.getElementById("login-group");
+    var m = document.getElementById("login-menu");
+    if (g && m && !g.contains(e.target)) m.classList.remove("open");
+});
+function login(mode) {
+    var m = document.getElementById("login-menu"); if(m) m.classList.remove("open");
+    var provider = new firebase.auth.GoogleAuthProvider();
+    if (mode === "guest") provider.setCustomParameters({ login_hint: GUEST_EMAIL });
+    auth.signInWithPopup(provider).catch(function(err) {
+        if (err.code !== "auth/popup-closed-by-user") alert("Erreur : " + err.message);
+    });
 }
 
 auth.onAuthStateChanged(user => {
