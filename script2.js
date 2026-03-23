@@ -108,6 +108,7 @@ function deleteSession(id) {
 }
 
 // --- 5. LOGIQUE D'AFFICHAGE ---
+// --- 5. LOGIQUE D'AFFICHAGE ---
 function updateUI() {
     const filterElem = document.getElementById('global-filter');
     const filterValue = filterElem ? filterElem.value : "ALL";
@@ -121,9 +122,12 @@ function updateUI() {
         headerBadge.className = "badge " + cls;
     }
 
-    // 👇 1. ON RÉCUPÈRE LE NOUVEAU FILTRE DE ROOM 👇
+    // ON RÉCUPÈRE LE NOUVEAU FILTRE DE ROOM
     const roomFilterElem = document.getElementById('room-filter');
     const roomFilterValue = roomFilterElem ? roomFilterElem.value : "ALL";
+
+    // 🛑 ON DÉFINIT LA VUE GLOBALE DÈS LE DÉBUT 🛑
+    const isGlobalView = (filterValue === "ALL" && roomFilterValue === "ALL");
 
     let startBR, goalBR;
     if (filterValue === "NL10") {
@@ -145,28 +149,15 @@ function updateUI() {
         xpTitle.innerHTML = `<span class="xp-start">🏁 Départ ${startBR}€</span> <span class="xp-arrow">➔</span> <span class="xp-goal">🎯 Objectif ${goalBR}€</span>`;
     }
 
-    // 👇 2. ON APPLIQUE LE DOUBLE FILTRE (Limite + Room) 👇
+    // ON APPLIQUE LE DOUBLE FILTRE (Limite + Room)
     let filteredSessions = sessions.filter(s => {
         const sessionStake = s.stake || "NL10";
-        const sessionRoom = s.room || "stake"; // (Par défaut Stake si c'est une vieille session)
+        const sessionRoom = s.room || "stake";
 
         let matchStake = (filterValue === "ALL") || (sessionStake === filterValue);
         let matchRoom = (roomFilterValue === "ALL") || (sessionRoom === roomFilterValue);
 
         return matchStake && matchRoom;
-    });
-
-    // 👇 FILTRE GLOBAL (stake only, toutes rooms) pour bankroll + progression
-    let globalSessions = sessions.filter(s => {
-        const sessionStake = s.stake || "NL10";
-        return (filterValue === "ALL") || (sessionStake === filterValue);
-    });
-
-    // Calcul bankroll globale (toutes rooms confondues)
-    let globalProfitNet = 0; let globalRakeback = 0;
-    globalSessions.forEach(s => {
-        globalProfitNet += s.gain;
-        globalRakeback += (s.rakeback || 0);
     });
 
     let handsLabels = [0]; let profitsNet = [0];  
@@ -182,13 +173,18 @@ function updateUI() {
     let rows = [];
 
     filteredSessions.forEach((s) => { 
-        totalHands += s.hands; 
+        const sHands = parseInt(s.hands) || 0;
+        totalHands += sHands; 
         currentProfitNet += s.gain;
         totalRakeback += (s.rakeback || 0);
+        
         if (s.gain > 0) winningSessions++;
         
-        if (s.gain > bestGain) { bestGain = s.gain; bestSession = s; }
-        if (s.gain < worstGain) { worstGain = s.gain; worstSession = s; }
+        // On ne compte pas le pur rakeback dans les records
+        if (!(sHands === 0 && s.gain === 0)) {
+            if (s.gain > bestGain) { bestGain = s.gain; bestSession = s; }
+            if (s.gain < worstGain) { worstGain = s.gain; worstSession = s; }
+        }
 
         handsLabels.push(totalHands);
         profitsNet.push(parseFloat(currentProfitNet.toFixed(2)));
@@ -198,19 +194,18 @@ function updateUI() {
         const gainBB = s.gain / bbValue;
         totalBB += gainBB;
 
-        // Ne pas afficher dans l'historique les entrées rakeback-only
-        const isRakebackOnly = (s.hands === 0 && s.gain === 0);
-
+        const isRakebackOnly = (sHands === 0 && s.gain === 0);
         const currentRoom = s.room || 'stake';
         const roomIcon = currentRoom === 'coinpoker' ? '🪙' : '🎲';
 
-        const rakebackBadge = (s.rakeback && s.rakeback > 0)
+        // 🛑 LE BADGE RAKEBACK (Ligne classique) : Masqué si pas en vue globale
+        const rakebackBadge = (isGlobalView && s.rakeback && s.rakeback > 0)
             ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${s.rakeback.toFixed(2)}€ RB</span>`
             : '';
 
         if (isRakebackOnly) {
-            // Entrée rakeback-only : visible uniquement par l'admin avec juste un bouton supprimer
-            if (isAntoine) {
+            // 🛑 LA LIGNE "RB ONLY" : Masquée si pas en vue globale
+            if (isAntoine && isGlobalView) {
                 rows.push(`<tr style="opacity: 0.5;">
                     <td style="color: #888; font-weight: 400;">
                         ${s.date} <br>
@@ -230,7 +225,7 @@ function updateUI() {
                         ${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span>
                     </small>
                 </td>
-                <td style="font-weight: 400;">${s.hands.toLocaleString()}</td>
+                <td style="font-weight: 400;">${sHands.toLocaleString()}</td>
                 <td style="color: ${s.gain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${s.gain.toFixed(2)}€${rakebackBadge}</td>
                 <td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">
                     ${gainBB.toFixed(1)} BB
@@ -261,8 +256,8 @@ function updateUI() {
 
     const brElem = document.getElementById('total-br');
     if(brElem) {
-        // Bankroll = gains de jeu (+ rakeback seulement en Vue Globale)
-        const newBr = startBR + globalProfitNet + (filterValue === "ALL" ? globalRakeback : 0);
+        // Bankroll = gains de jeu (+ Rakeback SEULEMENT si on est en Vue Globale)
+        const newBr = startBR + currentProfitNet + (isGlobalView ? totalRakeback : 0);
         if (previousBr === 0) {
             setTimeout(() => { animateValue('total-br', startBR, newBr, 1500); }, 1200);
         } else if (Math.abs(previousBr - newBr) > 300) {
@@ -277,15 +272,16 @@ function updateUI() {
     const rakebackElem = document.getElementById('total-rakeback');
     const rakebackCard = document.getElementById('rakeback-card');
     if(rakebackElem) {
-        rakebackElem.innerText = "+" + globalRakeback.toFixed(2) + "€";
-        rakebackElem.style.color = globalRakeback > 0 ? '#a78bfa' : '#9ca3af';
+        rakebackElem.innerText = "+" + totalRakeback.toFixed(2) + "€";
+        rakebackElem.style.color = totalRakeback > 0 ? '#a78bfa' : '#9ca3af';
     }
     if(rakebackCard) {
-        rakebackCard.style.display = (filterValue === "ALL") ? '' : 'none';
+        rakebackCard.style.display = isGlobalView ? '' : 'none';
     }
     
     document.getElementById('total-volume').innerText = totalHands.toLocaleString();
-    // Winrate = uniquement sur les gains de jeu, rakeback exclu
+    
+    // Winrate = pure performance aux cartes (Rakeback toujours exclu)
     let winrate = totalHands > 0 ? totalBB / (totalHands / 100) : 0;
     const winrateElem = document.getElementById('winrate');
     winrateElem.innerText = (winrate >= 0 ? '+' : '') + winrate.toFixed(2) + " bb/100";
@@ -294,15 +290,14 @@ function updateUI() {
     let successRate = filteredSessions.length > 0 ? (winningSessions / filteredSessions.length) * 100 : 0;
     document.getElementById('success-rate').innerText = successRate.toFixed(1) + "%";
     
-    // Progression = gains de jeu + rakeback (toutes rooms confondues)
-    let prog = ((globalProfitNet + (filterValue === "ALL" ? globalRakeback : 0)) / (goalBR - startBR)) * 100;
+    // Progression de la barre XP = calculée avec le rakeback SEULEMENT en Vue Globale
+    let prog = ((currentProfitNet + (isGlobalView ? totalRakeback : 0)) / (goalBR - startBR)) * 100;
     let displayProg = Math.min(100, Math.max(0, prog)); 
     document.getElementById('br-progression-text').innerText = displayProg.toFixed(1) + "%";
     document.getElementById('progress-bar-fill').style.width = displayProg + "%";
 
-  // 🛑 ON INVERSE L'ORDRE ICI POUR PROTÉGER LE CALENDRIER
-    renderCalendar(filteredSessions); // 👈 Le calendrier se met à jour en 1er
-    renderChart(handsLabels, profitsNet); // 👈 Le graphique en 2ème
+    renderCalendar(filteredSessions);
+    renderChart(handsLabels, profitsNet);
 }
 
 // --- 6. CHART ET AUDIO (AVEC EFFET NÉON AFFINÉ ET INTENSE - TECHNIQUE SABRE LASER) ---
