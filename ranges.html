@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ranges NL10 — PokerStats</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080810;
+  --bg2: #0e0e1a;
+  --bg3: #13131f;
+  --border: rgba(255,255,255,0.07);
+  --blue: #3b82f6;
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --purple: #a855f7;
+  --cyan: #06b6d4;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --card: rgba(255,255,255,0.03);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Montserrat',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+/* ── HEADER ── */
+.header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 28px; border-bottom:1px solid var(--border);
+  background:linear-gradient(90deg,rgba(59,130,246,0.06),transparent);
+  position:sticky; top:0; z-index:100; backdrop-filter:blur(10px);
+}
+.header-left { display:flex; align-items:center; gap:14px; }
+.logo { font-size:1.1rem; font-weight:900; color:#fff; letter-spacing:-0.5px; }
+.logo span { color:var(--blue); }
+.back-btn {
+  background:rgba(255,255,255,0.05); border:1px solid var(--border);
+  color:var(--muted); padding:6px 12px; border-radius:6px; cursor:pointer;
+  font-family:'Montserrat',sans-serif; font-size:0.75rem; font-weight:600;
+  transition:all 0.2s; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+}
+.back-btn:hover { color:#fff; border-color:#555; }
+.limit-badge {
+  background:linear-gradient(135deg,#a855f7,#7c3aed);
+  padding:4px 10px; border-radius:4px; font-size:0.7rem; font-weight:800;
+  letter-spacing:1px; box-shadow:0 0 12px rgba(168,85,247,0.4);
+}
+.quiz-toggle {
+  background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.4);
+  color:#f59e0b; padding:7px 16px; border-radius:7px; cursor:pointer;
+  font-family:'Montserrat',sans-serif; font-weight:700; font-size:0.8rem;
+  transition:all 0.2s; display:flex; align-items:center; gap:8px;
+}
+.quiz-toggle.active { background:rgba(245,158,11,0.25); border-color:#f59e0b; box-shadow:0 0 12px rgba(245,158,11,0.3); }
+.quiz-toggle:hover { background:rgba(245,158,11,0.2); }
+
+/* ── LAYOUT ── */
+.main { display:grid; grid-template-columns:220px 1fr; gap:0; height:calc(100vh - 57px); }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  border-right:1px solid var(--border); padding:20px 14px;
+  overflow-y:auto; display:flex; flex-direction:column; gap:20px;
+}
+.sidebar-section { display:flex; flex-direction:column; gap:6px; }
+.sidebar-label { font-size:0.62rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); font-weight:700; margin-bottom:4px; }
+
+.pos-btn, .sit-btn {
+  background:rgba(255,255,255,0.03); border:1px solid var(--border);
+  color:#888; padding:8px 12px; border-radius:7px; cursor:pointer;
+  font-family:'Montserrat',sans-serif; font-weight:600; font-size:0.78rem;
+  transition:all 0.18s; text-align:left; display:flex; align-items:center; gap:8px;
+  width:100%;
+}
+.pos-btn:hover, .sit-btn:hover { background:rgba(255,255,255,0.06); color:#ccc; }
+.pos-btn.active { background:rgba(59,130,246,0.15); border-color:rgba(59,130,246,0.5); color:#60a5fa; }
+.sit-btn.active { background:rgba(34,197,94,0.12); border-color:rgba(34,197,94,0.4); color:#4ade80; }
+
+.pos-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.legend { display:flex; flex-direction:column; gap:5px; }
+.legend-item { display:flex; align-items:center; gap:8px; font-size:0.7rem; color:#666; font-weight:600; }
+.legend-color { width:14px; height:14px; border-radius:3px; flex-shrink:0; }
+
+/* ── CONTENT ── */
+.content { overflow-y:auto; padding:24px; display:flex; flex-direction:column; gap:20px; }
+
+/* ── SITUATION HEADER ── */
+.sit-header {
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:16px 20px; display:flex; justify-content:space-between; align-items:flex-start;
+}
+.sit-title { font-size:1.1rem; font-weight:800; color:#fff; }
+.sit-desc { font-size:0.78rem; color:var(--muted); margin-top:4px; line-height:1.5; max-width:500px; }
+.sit-stats { display:flex; gap:16px; }
+.sit-stat { text-align:center; }
+.sit-stat-val { font-size:1.1rem; font-weight:800; color:var(--blue); }
+.sit-stat-label { font-size:0.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; }
+
+/* ── GRID CONTAINER ── */
+.grid-section { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.grid-panel {
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:16px; display:flex; flex-direction:column; gap:10px;
+}
+.grid-panel-title {
+  font-size:0.72rem; text-transform:uppercase; letter-spacing:1px;
+  font-weight:700; padding-bottom:8px; border-bottom:1px solid var(--border);
+}
+.grid-panel-title.value { color:var(--green); }
+.grid-panel-title.bluff { color:var(--red); }
+.grid-panel-title.call  { color:var(--cyan); }
+.grid-panel-title.fold  { color:var(--muted); }
+
+/* ── 13x13 MATRIX ── */
+.matrix-wrap { position:relative; }
+.matrix {
+  display:grid; grid-template-columns:repeat(13,1fr); gap:2px;
+  font-family:'JetBrains Mono',monospace;
+}
+.matrix-row-label {
+  display:grid; grid-template-columns:repeat(13,1fr); gap:2px;
+  margin-bottom:2px;
+}
+.m-cell {
+  aspect-ratio:1; border-radius:3px; display:flex; align-items:center;
+  justify-content:center; font-size:0.52rem; font-weight:700;
+  cursor:pointer; transition:all 0.15s; position:relative;
+  border:1px solid transparent; user-select:none;
+}
+.m-cell:hover { transform:scale(1.15); z-index:10; }
+
+/* Couleurs des mains */
+.m-pair    { background:rgba(168,85,247,0.25); border-color:rgba(168,85,247,0.4); color:#c084fc; }
+.m-value   { background:rgba(34,197,94,0.25);  border-color:rgba(34,197,94,0.4);  color:#4ade80; }
+.m-bluff   { background:rgba(239,68,68,0.2);   border-color:rgba(239,68,68,0.35); color:#f87171; }
+.m-call    { background:rgba(6,182,212,0.2);   border-color:rgba(6,182,212,0.35); color:#22d3ee; }
+.m-dead    { background:rgba(255,255,255,0.03); border-color:rgba(255,255,255,0.05); color:#333; }
+.m-mixed   { background:linear-gradient(135deg,rgba(34,197,94,0.2),rgba(6,182,212,0.2)); border-color:rgba(34,197,94,0.3); color:#86efac; }
+
+/* Quiz mode */
+.quiz-mode .m-cell:not(.m-dead) { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.1); color:#555; }
+.quiz-mode .m-cell.quiz-correct { background:rgba(34,197,94,0.3); border-color:#22c55e; color:#4ade80; animation:flashGreen 0.3s; }
+.quiz-mode .m-cell.quiz-wrong   { background:rgba(239,68,68,0.3);  border-color:#ef4444; color:#f87171; animation:flashRed 0.3s; }
+.quiz-mode .m-cell.quiz-revealed { }
+@keyframes flashGreen { 0%{transform:scale(1.3)} 100%{transform:scale(1)} }
+@keyframes flashRed   { 0%{transform:scale(1.3)} 100%{transform:scale(1)} }
+
+/* ── QUIZ BAR ── */
+.quiz-bar {
+  background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2);
+  border-radius:10px; padding:14px 20px; display:none;
+  align-items:center; justify-content:space-between; gap:16px;
+}
+.quiz-bar.visible { display:flex; }
+.quiz-score-group { display:flex; gap:20px; align-items:center; }
+.quiz-score-item { display:flex; flex-direction:column; align-items:center; }
+.quiz-score-val { font-size:1.4rem; font-weight:900; }
+.quiz-score-label { font-size:0.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; }
+.quiz-score-val.correct { color:var(--green); }
+.quiz-score-val.wrong   { color:var(--red); }
+.quiz-score-val.pct     { color:var(--yellow); }
+.quiz-msg { font-size:0.85rem; font-weight:600; color:var(--yellow); }
+.quiz-btn {
+  background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4);
+  color:#f59e0b; padding:8px 16px; border-radius:7px; cursor:pointer;
+  font-family:'Montserrat',sans-serif; font-weight:700; font-size:0.78rem;
+  transition:all 0.2s;
+}
+.quiz-btn:hover { background:rgba(245,158,11,0.3); }
+
+/* ── TIPS ── */
+.tips-panel {
+  background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px;
+}
+.tips-title { font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--muted); font-weight:700; margin-bottom:10px; }
+.tips-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.tip-card {
+  background:rgba(255,255,255,0.02); border:1px solid var(--border);
+  border-radius:8px; padding:10px 12px;
+}
+.tip-card-title { font-size:0.72rem; font-weight:700; margin-bottom:4px; }
+.tip-card-body { font-size:0.7rem; color:#666; line-height:1.5; }
+.tip-card.blue  { border-top:2px solid var(--blue);   } .tip-card.blue  .tip-card-title { color:var(--blue); }
+.tip-card.green { border-top:2px solid var(--green);  } .tip-card.green .tip-card-title { color:var(--green); }
+.tip-card.amber { border-top:2px solid var(--yellow); } .tip-card.amber .tip-card-title { color:var(--yellow); }
+.tip-card.red   { border-top:2px solid var(--red);    } .tip-card.red   .tip-card-title { color:var(--red); }
+.tip-card.purple{ border-top:2px solid var(--purple); } .tip-card.purple .tip-card-title { color:var(--purple); }
+.tip-card.cyan  { border-top:2px solid var(--cyan);   } .tip-card.cyan  .tip-card-title { color:var(--cyan); }
+
+/* ── TOOLTIP ── */
+.tooltip {
+  position:fixed; background:#1a1a2e; border:1px solid rgba(59,130,246,0.4);
+  border-radius:8px; padding:8px 12px; font-size:0.75rem; color:#fff;
+  pointer-events:none; z-index:999; display:none; max-width:200px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.5);
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#222; border-radius:4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="back-btn">← Dashboard</a>
+    <span class="logo">POKER<span>STATS</span></span>
+    <span class="limit-badge">NL10</span>
+  </div>
+  <div style="font-size:0.9rem;font-weight:800;color:#fff;">📚 Mes Ranges</div>
+  <button class="quiz-toggle" id="quiz-btn" onclick="toggleQuiz()">🎯 Mode Quiz</button>
+</div>
+
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Position</div>
+      <button class="pos-btn active" onclick="setPos('UTG')" id="pos-UTG"><span class="pos-dot" style="background:#ef4444"></span>UTG / UTG+1</button>
+      <button class="pos-btn" onclick="setPos('HJ')"  id="pos-HJ" ><span class="pos-dot" style="background:#f59e0b"></span>Hijack (HJ)</button>
+      <button class="pos-btn" onclick="setPos('CO')"  id="pos-CO" ><span class="pos-dot" style="background:#22c55e"></span>Cutoff (CO)</button>
+      <button class="pos-btn" onclick="setPos('BTN')" id="pos-BTN"><span class="pos-dot" style="background:#3b82f6"></span>Bouton (BTN)</button>
+      <button class="pos-btn" onclick="setPos('SB')"  id="pos-SB" ><span class="pos-dot" style="background:#a855f7"></span>Small Blind (SB)</button>
+      <button class="pos-btn" onclick="setPos('BB')"  id="pos-BB" ><span class="pos-dot" style="background:#06b6d4"></span>Big Blind (BB)</button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Situation</div>
+      <button class="sit-btn active" onclick="setSit('RFI')"     id="sit-RFI">🟢 Open Raise (RFI)</button>
+      <button class="sit-btn" onclick="setSit('3BET')"    id="sit-3BET">🚀 3-Bet</button>
+      <button class="sit-btn" onclick="setSit('4BET')"    id="sit-4BET">💥 4-Bet</button>
+      <button class="sit-btn" onclick="setSit('CALL')"    id="sit-CALL">📞 Cold Call IP</button>
+      <button class="sit-btn" onclick="setSit('SQUEEZE')" id="sit-SQUEEZE">🔥 Squeeze</button>
+      <button class="sit-btn" onclick="setSit('DEF')"     id="sit-DEF">🛡️ Défense BB</button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Légende</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background:rgba(34,197,94,0.4)"></div>Value / Open</div>
+        <div class="legend-item"><div class="legend-color" style="background:rgba(239,68,68,0.35)"></div>Bluff / Semi-bluff</div>
+        <div class="legend-item"><div class="legend-color" style="background:rgba(6,182,212,0.35)"></div>Call / Défense</div>
+        <div class="legend-item"><div class="legend-color" style="background:rgba(168,85,247,0.4)"></div>Paires (toujours)</div>
+        <div class="legend-item"><div class="legend-color" style="background:linear-gradient(135deg,rgba(34,197,94,0.3),rgba(6,182,212,0.3))"></div>Mixte (freq.)</div>
+        <div class="legend-item"><div class="legend-color" style="background:rgba(255,255,255,0.05)"></div>Fold / Hors range</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content" id="content">
+    <!-- Dynamiquement rempli par JS -->
+  </div>
+</div>
+
+<!-- Quiz bar -->
+<div class="quiz-bar" id="quiz-bar">
+  <div class="quiz-score-group">
+    <div class="quiz-score-item"><div class="quiz-score-val correct" id="q-correct">0</div><div class="quiz-score-label">Corrects</div></div>
+    <div class="quiz-score-item"><div class="quiz-score-val wrong"   id="q-wrong">0</div><div class="quiz-score-label">Erreurs</div></div>
+    <div class="quiz-score-item"><div class="quiz-score-val pct"     id="q-pct">—</div><div class="quiz-score-label">Score</div></div>
+  </div>
+  <div class="quiz-msg" id="quiz-msg">Clique sur chaque main pour indiquer si tu la joues ou pas</div>
+  <button class="quiz-btn" onclick="resetQuiz()">🔄 Recommencer</button>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ── DONNÉES ──────────────────────────────────────────────
+const RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+
+// Actions: 'value'=open/value, 'bluff'=bluff/semi-bluff, 'call'=call/defend, 'pair'=paire, 'mixed'=mixte, 'dead'=fold
+// Format: tableau 13x13 [row][col] où row=rank1, col=rank2
+// suited = row < col (haut-gauche triangle), offsuit = row > col, paires = diagonale
+
+const RANGES = {
+  UTG: {
+    RFI: {
+      desc: "UTG — Open très tight, premières positions, table de 6 max. Relance 2.5x.",
+      sizing: "2.5x",
+      combos: 142,
+      freq: "14.2%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99','88','77'],
+        suited:  ['AKs','AQs','AJs','ATs','A9s','KQs','KJs','KTs','QJs','QTs','JTs','T9s'],
+        offsuit: ['AKo','AQo','AJo','KQo']
+      })
+    },
+    '3BET': {
+      desc: "UTG vs RFI — 3bet très polar, value premium + bluffs bloqueurs.",
+      sizing: "3x IP / 4x OOP",
+      combos: 56,
+      freq: "5.5%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ'],
+        suited:  ['AKs','AQs','A5s','A4s','A3s','A2s'],
+        offsuit: ['AKo','AQo']
+      })
+    },
+    '4BET': {
+      desc: "UTG 4bet — Value + quelques bluffs bloqueurs A-x suited.",
+      sizing: "2.2x le 3bet",
+      combos: 34,
+      freq: "3.2%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ'],
+        suited:  ['AKs','AQs','A5s'],
+        offsuit: ['AKo']
+      })
+    },
+    CALL: {
+      desc: "UTG cold call — Très rare, uniquement mains spéculatives premium.",
+      sizing: "Call 2.5x",
+      combos: 28,
+      freq: "2.8%",
+      grid: buildGrid({
+        pairs:   ['TT','99','88','77','66'],
+        suited:  ['AJs','ATs','KQs','QJs','JTs'],
+        offsuit: []
+      })
+    },
+    SQUEEZE: {
+      desc: "UTG squeeze (vs RFI + caller) — Très value heavy.",
+      sizing: "4x + 1x/caller",
+      combos: 42,
+      freq: "4.1%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT'],
+        suited:  ['AKs','AQs','AJs','A5s'],
+        offsuit: ['AKo','AQo']
+      })
+    },
+    DEF: {
+      desc: "UTG défense BB vs steal — N/A depuis UTG.",
+      sizing: "—",
+      combos: 0,
+      freq: "—",
+      grid: buildGrid({ pairs:[], suited:[], offsuit:[] })
+    }
+  },
+  HJ: {
+    RFI: {
+      desc: "HJ — Open légèrement plus large qu'UTG. Relance 2.5x.",
+      sizing: "2.5x",
+      combos: 182,
+      freq: "18.2%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99','88','77','66'],
+        suited:  ['AKs','AQs','AJs','ATs','A9s','A8s','KQs','KJs','KTs','K9s','QJs','QTs','JTs','T9s','98s'],
+        offsuit: ['AKo','AQo','AJo','ATo','KQo','KJo']
+      })
+    },
+    '3BET': {
+      desc: "HJ vs RFI — 3bet polar, value + bluffs Ax suited.",
+      sizing: "3x IP / 4x OOP",
+      combos: 68,
+      freq: "6.8%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT'],
+        suited:  ['AKs','AQs','AJs','A5s','A4s','A3s'],
+        offsuit: ['AKo','AQo']
+      })
+    },
+    '4BET': {
+      desc: "HJ 4bet — Très value, QQ+ et AK.",
+      sizing: "2.2x",
+      combos: 40,
+      freq: "3.8%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ'],
+        suited:  ['AKs','AQs','A5s','A4s'],
+        offsuit: ['AKo']
+      })
+    },
+    CALL: {
+      desc: "HJ cold call — Mains spéculatives et connecteurs en IP.",
+      sizing: "Call 2.5x",
+      combos: 56,
+      freq: "5.4%",
+      grid: buildGrid({
+        pairs:   ['99','88','77','66','55'],
+        suited:  ['AJs','ATs','A9s','KQs','KJs','QJs','JTs','T9s','98s','87s'],
+        offsuit: ['AJo']
+      })
+    },
+    SQUEEZE: {
+      desc: "HJ squeeze — Value élargie + bluffs bloqueurs.",
+      sizing: "4x + 1x/caller",
+      combos: 58,
+      freq: "5.6%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99'],
+        suited:  ['AKs','AQs','AJs','A5s','A4s','KQs'],
+        offsuit: ['AKo','AQo']
+      })
+    },
+    DEF: {
+      desc: "HJ défense BB vs steal — N/A.",
+      sizing: "—",
+      combos: 0,
+      freq: "—",
+      grid: buildGrid({ pairs:[], suited:[], offsuit:[] })
+    }
+  },
+  CO: {
+    RFI: {
+      desc: "CO — Open bien plus large, position avantageuse. Relance 2.5x.",
+      sizing: "2.5x",
+      combos: 240,
+      freq: "24%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99','88','77','66','55','44'],
+        suited:  ['AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s','KQs','KJs','KTs','K9s','K8s','QJs','QTs','Q9s','JTs','J9s','T9s','T8s','98s','97s','87s','76s'],
+        offsuit: ['AKo','AQo','AJo','ATo','A9o','KQo','KJo','KTo','QJo']
+      })
+    },
+    '3BET': {
+      desc: "CO vs RFI — 3bet élargi, plus de bluffs possible en position.",
+      sizing: "3x",
+      combos: 88,
+      freq: "8.5%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99'],
+        suited:  ['AKs','AQs','AJs','ATs','A5s','A4s','A3s','A2s','KQs'],
+        offsuit: ['AKo','AQo','AJo']
+      })
+    },
+    '4BET': {
+      desc: "CO 4bet — Value + bluffs bloqueurs Ax.",
+      sizing: "2.2x",
+      combos: 48,
+      freq: "4.6%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ'],
+        suited:  ['AKs','AQs','A5s','A4s','A3s'],
+        offsuit: ['AKo','AQo']
+      })
+    },
+    CALL: {
+      desc: "CO cold call — Connecteurs, paires moyennes, mains spéculatives.",
+      sizing: "Call 2.5x",
+      combos: 72,
+      freq: "6.9%",
+      grid: buildGrid({
+        pairs:   ['88','77','66','55','44','33'],
+        suited:  ['ATs','A9s','A8s','A7s','KJs','KTs','QJs','JTs','T9s','98s','87s','76s','65s'],
+        offsuit: ['ATo','KQo','KJo']
+      })
+    },
+    SQUEEZE: {
+      desc: "CO squeeze — Value + large range de bluffs en position.",
+      sizing: "3.5x + 1x/caller",
+      combos: 76,
+      freq: "7.3%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99','88'],
+        suited:  ['AKs','AQs','AJs','ATs','A5s','A4s','A3s','KQs','KJs'],
+        offsuit: ['AKo','AQo','AJo']
+      })
+    },
+    DEF: {
+      desc: "CO défense BB vs steal — N/A.",
+      sizing: "—",
+      combos: 0,
+      freq: "—",
+      grid: buildGrid({ pairs:[], suited:[], offsuit:[] })
+    }
+  },
+  BTN: {
+    RFI: {
+      desc: "BTN — Open le plus large du jeu, position max. Relance 2.5x.",
+      sizing: "2.5x",
+      combos: 320,
+      freq: "32%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99','88','77','66','55','44','33','22'],
+        suited:  ['AKs','AQs','AJs','ATs','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s','KQs','KJs','KTs','K9s','K8s','K7s','K6s','K5s','QJs','QTs','Q9s','Q8s','JTs','J9s','J8s','T9s','T8s','T7s','98s','97s','96s','87s','86s','76s','75s','65s','54s'],
+        offsuit: ['AKo','AQo','AJo','ATo','A9o','A8o','A7o','A6o','A5o','KQo','KJo','KTo','K9o','QJo','QTo','JTo']
+      })
+    },
+    '3BET': {
+      desc: "BTN vs RFI — 3bet très large en position, beaucoup de bluffs.",
+      sizing: "3x",
+      combos: 120,
+      freq: "11.5%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99','88'],
+        suited:  ['AKs','AQs','AJs','ATs','A9s','A5s','A4s','A3s','A2s','KQs','KJs','K9s','QJs','Q9s','JTs','J9s','T9s'],
+        offsuit: ['AKo','AQo','AJo','ATo','KQo']
+      })
+    },
+    '4BET': {
+      desc: "BTN 4bet — Value élargie + bluffs bloqueurs nombreux.",
+      sizing: "2.2x",
+      combos: 60,
+      freq: "5.7%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ'],
+        suited:  ['AKs','AQs','AJs','A5s','A4s','A3s','A2s'],
+        offsuit: ['AKo','AQo','AJo']
+      })
+    },
+    CALL: {
+      desc: "BTN cold call — Très large, presque toutes mains spéculatives.",
+      sizing: "Call 2.5x",
+      combos: 96,
+      freq: "9.2%",
+      grid: buildGrid({
+        pairs:   ['77','66','55','44','33','22'],
+        suited:  ['A8s','A7s','A6s','KTs','K9s','K8s','QTs','Q9s','Q8s','J9s','J8s','T8s','T7s','97s','96s','86s','75s','65s','54s','43s'],
+        offsuit: ['A9o','A8o','KJo','KTo','QJo','QTo','JTo']
+      })
+    },
+    SQUEEZE: {
+      desc: "BTN squeeze — Très large, position maximale.",
+      sizing: "3.5x + 1x/caller",
+      combos: 96,
+      freq: "9.2%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99','88','77'],
+        suited:  ['AKs','AQs','AJs','ATs','A9s','A5s','A4s','A3s','A2s','KQs','KJs','KTs','QJs','QTs','JTs','T9s'],
+        offsuit: ['AKo','AQo','AJo','ATo','KQo','KJo']
+      })
+    },
+    DEF: {
+      desc: "BTN défense BB vs steal — N/A (BTN est souvent le stealer).",
+      sizing: "—",
+      combos: 0,
+      freq: "—",
+      grid: buildGrid({ pairs:[], suited:[], offsuit:[] })
+    }
+  },
+  SB: {
+    RFI: {
+      desc: "SB — Open tight car OOP vs BB. Relance 3x pour décourager les calls.",
+      sizing: "3x",
+      combos: 200,
+      freq: "20%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99','88','77','66','55','44'],
+        suited:  ['AKs','AQs','AJs','ATs','A9s','A8s','A7s','A5s','A4s','A3s','A2s','KQs','KJs','KTs','K9s','QJs','QTs','Q9s','JTs','J9s','T9s','T8s','98s','87s','76s','65s'],
+        offsuit: ['AKo','AQo','AJo','ATo','A9o','KQo','KJo','QJo']
+      })
+    },
+    '3BET': {
+      desc: "SB 3bet vs RFI — Polar mais OOP, privilégier value.",
+      sizing: "4x OOP",
+      combos: 72,
+      freq: "6.9%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT'],
+        suited:  ['AKs','AQs','AJs','A5s','A4s','A3s','A2s','KQs'],
+        offsuit: ['AKo','AQo','AJo']
+      })
+    },
+    '4BET': {
+      desc: "SB 4bet — Value premium uniquement (OOP).",
+      sizing: "2.5x",
+      combos: 38,
+      freq: "3.6%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ'],
+        suited:  ['AKs','AQs','A5s','A4s'],
+        offsuit: ['AKo']
+      })
+    },
+    CALL: {
+      desc: "SB limp/call vs open — Range de défense OOP.",
+      sizing: "Limp / call 3x",
+      combos: 88,
+      freq: "8.5%",
+      grid: buildGrid({
+        pairs:   ['99','88','77','66','55','44','33','22'],
+        suited:  ['A9s','A8s','A7s','A6s','KTs','K9s','K8s','QTs','Q9s','JTs','J9s','T9s','T8s','98s','87s','76s','65s','54s'],
+        offsuit: ['KQo','KJo']
+      })
+    },
+    SQUEEZE: {
+      desc: "SB squeeze (vs RFI + caller) — OOP, rester polar.",
+      sizing: "4x + 1x/caller",
+      combos: 64,
+      freq: "6.1%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99'],
+        suited:  ['AKs','AQs','AJs','A5s','A4s','A3s','KQs'],
+        offsuit: ['AKo','AQo']
+      })
+    },
+    DEF: {
+      desc: "SB défense vs BTN steal — Call avec range large car fermé.",
+      sizing: "Call 2.5x",
+      combos: 112,
+      freq: "10.7%",
+      grid: buildGrid({
+        pairs:   ['22','33','44','55','66','77','88','99','TT','JJ','QQ','KK','AA'],
+        suited:  ['A2s','A3s','A4s','A5s','A6s','A7s','A8s','A9s','ATs','AJs','AQs','AKs','K2s','K3s','K4s','K5s','K6s','K7s','K8s','K9s','KTs','KJs','KQs','Q6s','Q7s','Q8s','Q9s','QTs','QJs','J7s','J8s','J9s','JTs','T7s','T8s','T9s','97s','98s','86s','87s','76s','65s','54s'],
+        offsuit: ['AKo','AQo','AJo','ATo','A9o','A8o','KQo','KJo','KTo']
+      })
+    }
+  },
+  BB: {
+    RFI: {
+      desc: "BB — Pas d'open depuis BB (déjà en BB). Section défense.",
+      sizing: "—",
+      combos: 0,
+      freq: "—",
+      grid: buildGrid({ pairs:[], suited:[], offsuit:[] })
+    },
+    '3BET': {
+      desc: "BB 3bet vs open — Large range OOP, 3bet ou call, rarement fold.",
+      sizing: "3.5x OOP",
+      combos: 96,
+      freq: "9.2%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99','88'],
+        suited:  ['AKs','AQs','AJs','ATs','A5s','A4s','A3s','A2s','KQs','KJs','K9s','Q9s','J9s','T9s','98s'],
+        offsuit: ['AKo','AQo','AJo','ATo','KQo']
+      })
+    },
+    '4BET': {
+      desc: "BB 4bet — Value + bluffs bloqueurs Ax.",
+      sizing: "2.5x",
+      combos: 48,
+      freq: "4.6%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ'],
+        suited:  ['AKs','AQs','AJs','A5s','A4s','A3s'],
+        offsuit: ['AKo','AQo']
+      })
+    },
+    CALL: {
+      desc: "BB défense vs open — Call très large, meilleure cote du jeu.",
+      sizing: "Call 2.5x",
+      combos: 180,
+      freq: "17.2%",
+      grid: buildGrid({
+        pairs:   ['22','33','44','55','66','77','88','99','TT','JJ','QQ','KK','AA'],
+        suited:  ['A2s','A3s','A4s','A5s','A6s','A7s','A8s','A9s','ATs','AJs','AQs','AKs','K2s','K3s','K4s','K5s','K6s','K7s','K8s','K9s','KTs','KJs','KQs','Q4s','Q5s','Q6s','Q7s','Q8s','Q9s','QTs','QJs','J5s','J6s','J7s','J8s','J9s','JTs','T6s','T7s','T8s','T9s','96s','97s','98s','85s','86s','87s','75s','76s','64s','65s','53s','54s','43s'],
+        offsuit: ['AKo','AQo','AJo','ATo','A9o','A8o','A7o','KQo','KJo','KTo','K9o','QJo','QTo','JTo']
+      })
+    },
+    SQUEEZE: {
+      desc: "BB squeeze (vs RFI + caller) — Large range, bonne équité.",
+      sizing: "4x + 1x/caller",
+      combos: 88,
+      freq: "8.4%",
+      grid: buildGrid({
+        pairs:   ['AA','KK','QQ','JJ','TT','99','88','77'],
+        suited:  ['AKs','AQs','AJs','ATs','A5s','A4s','A3s','A2s','KQs','KJs','QJs','JTs','T9s'],
+        offsuit: ['AKo','AQo','AJo','ATo','KQo','KJo']
+      })
+    },
+    DEF: {
+      desc: "BB défense vs BTN steal — Range très large, pot odds excellentes.",
+      sizing: "Call 2.5x",
+      combos: 200,
+      freq: "19.2%",
+      grid: buildGrid({
+        pairs:   ['22','33','44','55','66','77','88','99','TT','JJ','QQ','KK','AA'],
+        suited:  ['A2s','A3s','A4s','A5s','A6s','A7s','A8s','A9s','ATs','AJs','AQs','AKs','K2s','K3s','K4s','K5s','K6s','K7s','K8s','K9s','KTs','KJs','KQs','Q3s','Q4s','Q5s','Q6s','Q7s','Q8s','Q9s','QTs','QJs','J4s','J5s','J6s','J7s','J8s','J9s','JTs','T5s','T6s','T7s','T8s','T9s','95s','96s','97s','98s','84s','85s','86s','87s','74s','75s','76s','63s','64s','65s','52s','53s','54s','42s','43s','32s'],
+        offsuit: ['AKo','AQo','AJo','ATo','A9o','A8o','A7o','A6o','A5o','KQo','KJo','KTo','K9o','K8o','QJo','QTo','Q9o','JTo','J9o']
+      })
+    }
+  }
+};
+
+const TIPS = {
+  UTG: { RFI: [
+    {t:'Taille', b:'Ouvre à 2.5x, parfois 3x en live. Reste cohérent.', c:'blue'},
+    {t:'Sélection', b:'VPIP ~14% depuis UTG. Sois patient.', c:'green'},
+    {t:'Suited Aces', b:'A2s-A5s sont des bluffs préflop, pas des calls.', c:'amber'},
+    {t:'Paires moyennes', b:'77-99 : set mining si cotes implicites suffisantes.', c:'purple'},
+    {t:'AJo/ATo', b:'Attention OOP avec AJo+ face aux 3bets. Souvent fold.', c:'red'},
+    {t:'Discipline', b:'UTG est la position la plus difficile. Fold beaucoup.', c:'cyan'},
+  ]},
+  HJ: { RFI: [
+    {t:'Élargir vs UTG', b:'Ajoute 66, K9s, Q9s, 98s par rapport à UTG.', c:'blue'},
+    {t:'KTo', b:'KTo entre dans la range depuis HJ.', c:'green'},
+    {t:'Suited connectors', b:'T9s, 98s jouables pour le set/flush mining.', c:'amber'},
+    {t:'Position relative', b:'HJ a souvent CO/BTN derrière — reste sélectif.', c:'purple'},
+    {t:'3bet défense', b:'Face 3bet de CO/BTN : call JJ/QQ possible IP.', c:'red'},
+    {t:'K8s-K7s', b:'Ces mains sont borderline, joue en fonction des adversaires.', c:'cyan'},
+  ]},
+  CO: { RFI: [
+    {t:'Position forte', b:'CO est une excellente position. Élargis sans hésiter.', c:'blue'},
+    {t:'Ax suited', b:'A2s-A9s toutes jouables depuis CO.', c:'green'},
+    {t:'Broadway', b:'KTo+, QTo+, JTo entrent dans la range CO.', c:'amber'},
+    {t:'Steal BTN/SB/BB', b:'CO ouvre souvent pour voler les blindes.', c:'purple'},
+    {t:'Face 3bet BTN', b:'IP face 3bet : call plus large avec paires et connecteurs.', c:'red'},
+    {t:'Q9s, J9s', b:'Ces mains semi-spéculatives jouables en CO.', c:'cyan'},
+  ]},
+  BTN: { RFI: [
+    {t:'Position ultime', b:'BTN ouvre ~32% des mains. C\'est la position la plus profitable.', c:'blue'},
+    {t:'Stealez les blindes', b:'Ouvre large pour presser SB et BB OOP.', c:'green'},
+    {t:'Bas connecteurs', b:'54s, 65s, 76s — jouables pour la valeur de tirage.', c:'amber'},
+    {t:'K5s-K6s', b:'Ces mains marginales deviennent rentables en BTN.', c:'purple'},
+    {t:'Face 3bet OOP', b:'Défends plus large en BTN : TT+, AQs+, bloqueurs.', c:'red'},
+    {t:'2.5x standard', b:'Relance 2.5x depuis BTN pour rester efficace.', c:'cyan'},
+  ]},
+  SB: { RFI: [
+    {t:'OOP vs BB', b:'SB est OOP pour tout le reste de la main. Open tight.', c:'blue'},
+    {t:'3x sizing', b:'Ouvre à 3x depuis SB pour réduire les calls du BB.', c:'green'},
+    {t:'Limp possible', b:'Certains joueurs limpent large en SB. Moins optimal en NL10.', c:'amber'},
+    {t:'BB défend large', b:'Le BB a souvent la cote pour call. Ne survaluez pas.', c:'purple'},
+    {t:'Range tight', b:'VPIP ~18-22% depuis SB en 6-max NL10.', c:'red'},
+    {t:'Évite Kxo trash', b:'K8o, K7o sont des pièges depuis SB OOP.', c:'cyan'},
+  ]},
+  BB: { RFI: [
+    {t:'Défense large', b:'BB a la meilleure cote pot. Défends beaucoup.', c:'blue'},
+    {t:'MDF', b:'Vs open 2.5x : défends au moins 55% de ta range.', c:'green'},
+    {t:'3bet ou call', b:'Contre BTN/CO : 3bet ou call. Rarement fold.', c:'amber'},
+    {t:'Suited trash', b:'32s, 43s jouables en BB face petit open.', c:'purple'},
+    {t:'OOP disadvantage', b:'En BB tu seras OOP toute la main — joue tight postflop.', c:'red'},
+    {t:'Ajuste vs position', b:'Défends plus vs BTN, moins vs UTG.', c:'cyan'},
+  ]}
+};
+
+// ── UTILS ──────────────────────────────────────────────
+function buildGrid({ pairs, suited, offsuit }) {
+  const grid = {};
+  // Toutes les combinaisons
+  for (let r = 0; r < 13; r++) {
+    for (let c = 0; c < 13; c++) {
+      const key = cellKey(r, c);
+      grid[key] = 'dead';
+    }
+  }
+  // Paires (diagonale)
+  pairs.forEach(h => {
+    const r = RANKS.indexOf(h[0]);
+    if (r >= 0) grid[`${r}-${r}`] = 'pair';
+  });
+  // Suited (haut-gauche, r < c)
+  suited.forEach(h => {
+    const r1 = RANKS.indexOf(h[0]);
+    const r2 = RANKS.indexOf(h[1]);
+    if (r1 >= 0 && r2 >= 0) {
+      const min = Math.min(r1,r2), max = Math.max(r1,r2);
+      grid[`${min}-${max}`] = 'value';
+    }
+  });
+  // Offsuit (bas-droite, r > c)
+  offsuit.forEach(h => {
+    const r1 = RANKS.indexOf(h[0]);
+    const r2 = RANKS.indexOf(h[1]);
+    if (r1 >= 0 && r2 >= 0) {
+      const min = Math.min(r1,r2), max = Math.max(r1,r2);
+      grid[`${max}-${min}`] = 'bluff';
+    }
+  });
+  return grid;
+}
+
+function cellKey(r, c) { return `${r}-${c}`; }
+
+function cellLabel(r, c) {
+  if (r === c) return RANKS[r]+RANKS[c];
+  if (r < c)  return RANKS[r]+RANKS[c]+'s';
+  return RANKS[c]+RANKS[r]+'o';
+}
+
+// ── STATE ──────────────────────────────────────────────
+let curPos = 'UTG', curSit = 'RFI';
+let quizMode = false, quizAnswers = {}, quizCorrect = 0, quizWrong = 0;
+
+// ── RENDER ──────────────────────────────────────────────
+function render() {
+  const data = RANGES[curPos][curSit];
+  const tips = (TIPS[curPos] && TIPS[curPos][curSit]) ? TIPS[curPos][curSit] :
+               (TIPS[curPos] && TIPS[curPos]['RFI'])   ? TIPS[curPos]['RFI']   : [];
+  const content = document.getElementById('content');
+
+  const noData = data.combos === 0;
+
+  content.innerHTML = `
+    <div class="sit-header">
+      <div>
+        <div class="sit-title">${curPos} — ${sitLabel(curSit)}</div>
+        <div class="sit-desc">${data.desc}</div>
+      </div>
+      ${!noData ? `<div class="sit-stats">
+        <div class="sit-stat"><div class="sit-stat-val">${data.sizing}</div><div class="sit-stat-label">Sizing</div></div>
+        <div class="sit-stat"><div class="sit-stat-val">${data.combos}</div><div class="sit-stat-label">Combos</div></div>
+        <div class="sit-stat"><div class="sit-stat-val">${data.freq}</div><div class="sit-stat-label">Fréq.</div></div>
+      </div>` : ''}
+    </div>
+
+    ${!noData ? `<div class="grid-section">
+      <div class="grid-panel">
+        <div class="grid-panel-title value">🎯 Range visuelle — ${curPos} ${sitLabel(curSit)}</div>
+        <div class="matrix ${quizMode ? 'quiz-mode' : ''}" id="matrix">
+          ${renderMatrix(data.grid)}
+        </div>
+      </div>
+      <div class="grid-panel">
+        <div class="grid-panel-title value">📊 Répartition</div>
+        ${renderBreakdown(data.grid)}
+      </div>
+    </div>` : `<div style="text-align:center;padding:60px;color:#555;font-size:0.9rem;font-weight:600;">
+      Cette situation ne s'applique pas à la position ${curPos}.
+    </div>`}
+
+    ${tips.length ? `<div class="tips-panel">
+      <div class="tips-title">💡 Tips clés — ${curPos}</div>
+      <div class="tips-grid">
+        ${tips.map(t => `<div class="tip-card ${t.c}"><div class="tip-card-title">${t.t}</div><div class="tip-card-body">${t.b}</div></div>`).join('')}
+      </div>
+    </div>` : ''}
+  `;
+
+  // Events sur les cellules
+  if (!noData) {
+    document.querySelectorAll('.m-cell').forEach(cell => {
+      cell.addEventListener('mouseenter', showTooltip);
+      cell.addEventListener('mouseleave', hideTooltip);
+      if (quizMode) cell.addEventListener('click', quizClick);
+    });
+  }
+}
+
+function renderMatrix(grid) {
+  let html = '';
+  for (let r = 0; r < 13; r++) {
+    for (let c = 0; c < 13; c++) {
+      const key = cellKey(r, c);
+      const action = grid[key] || 'dead';
+      const label = cellLabel(r, c);
+      const qa = quizAnswers[key];
+      let extra = '';
+      if (quizMode && qa) extra = ` quiz-${qa}`;
+      html += `<div class="m-cell m-${action}${extra}" data-key="${key}" data-action="${action}" data-label="${label}">${label}</div>`;
+    }
+  }
+  return html;
+}
+
+function renderBreakdown(grid) {
+  const counts = { pair:0, value:0, bluff:0, call:0, mixed:0, dead:0 };
+  Object.values(grid).forEach(a => counts[a] = (counts[a]||0)+1);
+  const total = 169;
+  const playable = total - counts.dead;
+  const bars = [
+    { label:'Paires',        count:counts.pair,  color:'#a855f7', key:'pair'  },
+    { label:'Value/Open',    count:counts.value, color:'#22c55e', key:'value' },
+    { label:'Bluff/Semi',    count:counts.bluff, color:'#ef4444', key:'bluff' },
+    { label:'Call/Défense',  count:counts.call,  color:'#06b6d4', key:'call'  },
+    { label:'Mixte',         count:counts.mixed, color:'#86efac', key:'mixed' },
+  ].filter(b => b.count > 0);
+
+  return `
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+      <div style="font-size:0.72rem;color:#555;font-weight:600;">${playable} / 169 combinaisons jouées (${((playable/169)*100).toFixed(0)}%)</div>
+      ${bars.map(b => `
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:0.72rem;font-weight:600;color:${b.color}">${b.label}</span>
+            <span style="font-size:0.72rem;color:#555;">${b.count} combos (${((b.count/169)*100).toFixed(0)}%)</span>
+          </div>
+          <div style="height:6px;background:#1a1a2a;border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${(b.count/169)*100}%;background:${b.color};border-radius:3px;transition:width 0.4s;"></div>
+          </div>
+        </div>
+      `).join('')}
+      <div style="margin-top:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05);">
+        <div style="font-size:0.7rem;color:#555;font-weight:600;margin-bottom:8px;">Légende couleurs</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;color:#666;"><div style="width:12px;height:12px;border-radius:2px;background:rgba(168,85,247,0.4);flex-shrink:0;"></div>Paire (diag.)</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;color:#666;"><div style="width:12px;height:12px;border-radius:2px;background:rgba(34,197,94,0.35);flex-shrink:0;"></div>Suited (↖)</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;color:#666;"><div style="width:12px;height:12px;border-radius:2px;background:rgba(239,68,68,0.3);flex-shrink:0;"></div>Offsuit (↘)</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:0.68rem;color:#666;"><div style="width:12px;height:12px;border-radius:2px;background:rgba(255,255,255,0.04);flex-shrink:0;"></div>Fold</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function sitLabel(s) {
+  return { RFI:'Open Raise', '3BET':'3-Bet', '4BET':'4-Bet', CALL:'Cold Call', SQUEEZE:'Squeeze', DEF:'Défense BB' }[s] || s;
+}
+
+// ── TOOLTIP ──────────────────────────────────────────────
+function showTooltip(e) {
+  const cell = e.currentTarget;
+  const action = cell.dataset.action;
+  const label = cell.dataset.label;
+  const labels = { value:'✅ Open / Value', bluff:'🔴 Bluff / Semi-bluff', call:'📞 Call / Défense', pair:'♠ Paire — Toujours jouée', mixed:'🟡 Mixte (fréquence)', dead:'❌ Fold — Hors range' };
+  const tt = document.getElementById('tooltip');
+  tt.innerHTML = `<strong>${label}</strong><br><span style="color:#888">${labels[action]||action}</span>`;
+  tt.style.display = 'block';
+  moveTip(e);
+}
+function hideTooltip() { document.getElementById('tooltip').style.display = 'none'; }
+function moveTip(e) {
+  const tt = document.getElementById('tooltip');
+  tt.style.left = (e.clientX + 12) + 'px';
+  tt.style.top  = (e.clientY - 30) + 'px';
+}
+document.addEventListener('mousemove', e => {
+  const tt = document.getElementById('tooltip');
+  if (tt.style.display === 'block') moveTip(e);
+});
+
+// ── QUIZ ──────────────────────────────────────────────
+function toggleQuiz() {
+  quizMode = !quizMode;
+  quizAnswers = {}; quizCorrect = 0; quizWrong = 0;
+  const btn = document.getElementById('quiz-btn');
+  const bar = document.getElementById('quiz-bar');
+  btn.classList.toggle('active', quizMode);
+  btn.textContent = quizMode ? '✅ Quitter Quiz' : '🎯 Mode Quiz';
+  bar.classList.toggle('visible', quizMode);
+  updateQuizScore();
+  render();
+}
+
+function quizClick(e) {
+  const cell = e.currentTarget;
+  const key = cell.dataset.key;
+  const action = cell.dataset.action;
+  if (quizAnswers[key]) return; // déjà répondu
+
+  const isPlayable = action !== 'dead';
+  // On toggle : clic = "je joue cette main"
+  const correct = isPlayable;
+  quizAnswers[key] = correct ? 'correct' : 'wrong';
+  if (correct) quizCorrect++; else quizWrong++;
+
+  cell.classList.add(`quiz-${quizAnswers[key]}`);
+  // Révéler la vraie couleur après 600ms
+  setTimeout(() => {
+    cell.classList.remove('quiz-correct','quiz-wrong');
+    cell.classList.add('m-' + action, 'quiz-revealed');
+  }, 600);
+
+  updateQuizScore();
+}
+
+function updateQuizScore() {
+  const total = quizCorrect + quizWrong;
+  document.getElementById('q-correct').textContent = quizCorrect;
+  document.getElementById('q-wrong').textContent = quizWrong;
+  document.getElementById('q-pct').textContent = total > 0 ? Math.round((quizCorrect/total)*100) + '%' : '—';
+  const msgs = ['Clique sur chaque main pour indiquer si tu la joues ou pas', 'Continue !', 'Bon travail !', 'Excellent !'];
+  const pct = total > 0 ? quizCorrect/total : 0;
+  document.getElementById('quiz-msg').textContent = total === 0 ? msgs[0] : pct > 0.8 ? msgs[3] : pct > 0.6 ? msgs[2] : msgs[1];
+}
+
+function resetQuiz() {
+  quizAnswers = {}; quizCorrect = 0; quizWrong = 0;
+  updateQuizScore(); render();
+}
+
+// ── NAVIGATION ──────────────────────────────────────────────
+function setPos(pos) {
+  curPos = pos;
+  document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pos-'+pos).classList.add('active');
+  if (quizMode) { quizAnswers={}; quizCorrect=0; quizWrong=0; updateQuizScore(); }
+  render();
+}
+function setSit(sit) {
+  curSit = sit;
+  document.querySelectorAll('.sit-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sit-'+sit).classList.add('active');
+  if (quizMode) { quizAnswers={}; quizCorrect=0; quizWrong=0; updateQuizScore(); }
+  render();
+}
+
+// Init
+render();
+</script>
+</body>
+</html>

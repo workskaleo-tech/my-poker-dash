@@ -17,29 +17,9 @@ const auth = firebase.auth();
 const ADMIN_EMAIL = "plessier.antoine10@gmail.com";
 const GUEST_EMAIL  = "strategos.grepolis@gmail.com";
 
-function toggleLoginMenu() {
-    const m = document.getElementById("login-menu");
-    if (m) m.classList.toggle("open");
-}
-document.addEventListener("click", function(e) {
-    const g = document.getElementById("login-group");
-    const m = document.getElementById("login-menu");
-    if (g && m && !g.contains(e.target)) m.classList.remove("open");
-});
 function login() {
-    const m = document.getElementById("login-menu"); if(m) m.classList.remove("open");
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => {
-        if (err.code !== "auth/popup-closed-by-user") alert("Erreur : " + err.message);
-    });
-}
-function loginGuest() {
-    const m = document.getElementById("login-menu"); if(m) m.classList.remove("open");
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ login_hint: GUEST_EMAIL });
-    auth.signInWithPopup(provider).catch(err => {
-        if (err.code !== "auth/popup-closed-by-user") alert("Erreur : " + err.message);
-    });
+    auth.signInWithPopup(provider).catch(err => alert("Erreur : " + err.message));
 }
 
 auth.onAuthStateChanged(user => {
@@ -281,8 +261,8 @@ function updateUI() {
 
     const brElem = document.getElementById('total-br');
     if(brElem) {
-        // Bankroll = gains de jeu + rakeback (toutes rooms confondues)
-        const newBr = startBR + globalProfitNet + globalRakeback;
+        // Bankroll = gains de jeu (+ rakeback seulement en Vue Globale)
+        const newBr = startBR + globalProfitNet + (filterValue === "ALL" ? globalRakeback : 0);
         if (previousBr === 0) {
             setTimeout(() => { animateValue('total-br', startBR, newBr, 1500); }, 1200);
         } else if (Math.abs(previousBr - newBr) > 300) {
@@ -315,7 +295,7 @@ function updateUI() {
     document.getElementById('success-rate').innerText = successRate.toFixed(1) + "%";
     
     // Progression = gains de jeu + rakeback (toutes rooms confondues)
-    let prog = ((globalProfitNet + globalRakeback) / (goalBR - startBR)) * 100;
+    let prog = ((globalProfitNet + (filterValue === "ALL" ? globalRakeback : 0)) / (goalBR - startBR)) * 100;
     let displayProg = Math.min(100, Math.max(0, prog)); 
     document.getElementById('br-progression-text').innerText = displayProg.toFixed(1) + "%";
     document.getElementById('progress-bar-fill').style.width = displayProg + "%";
