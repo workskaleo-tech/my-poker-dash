@@ -27,11 +27,17 @@ document.addEventListener("click", function(e) {
     if (g && m && !g.contains(e.target)) m.classList.remove("open");
 });
 function login(mode) {
-    var m = document.getElementById("login-menu"); if(m) m.classList.remove("open");
+    var m = document.getElementById("login-menu"); 
+    if(m) m.classList.remove("open");
+    
     var provider = new firebase.auth.GoogleAuthProvider();
-    if (mode === "guest") provider.setCustomParameters({ login_hint: GUEST_EMAIL });
-    auth.signInWithPopup(provider).catch(function(err) {
-        if (err.code !== "auth/popup-closed-by-user") alert("Erreur : " + err.message);
+    if (mode === "guest") {
+        provider.setCustomParameters({ login_hint: GUEST_EMAIL });
+    }
+    
+    // 🛑 ON UTILISE REDIRECT AU LIEU DE POPUP 🛑
+    auth.signInWithRedirect(provider).catch(function(err) {
+        alert("Erreur : " + err.message);
     });
 }
 
