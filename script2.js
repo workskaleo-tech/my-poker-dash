@@ -35,9 +35,8 @@ function login(mode) {
         provider.setCustomParameters({ login_hint: GUEST_EMAIL });
     }
     
-    // 🛑 ON UTILISE REDIRECT AU LIEU DE POPUP 🛑
-    auth.signInWithRedirect(provider).catch(function(err) {
-        alert("Erreur : " + err.message);
+    auth.signInWithPopup(provider).catch(function(err) {
+        if (err.code !== "auth/popup-closed-by-user") alert("Erreur : " + err.message);
     });
 }
 
