@@ -1,12 +1,12 @@
 // --- 1. CONFIGURATION FIREBASE ---
 const firebaseConfig = {
-  apiKey: "AIzaSyCQRX7XFYsFqHtPglFPPfvkFaswXc2vewc",
-  authDomain: "pokerstats-caaa8.firebaseapp.com",
-  projectId: "pokerstats-caaa8",
-  storageBucket: "pokerstats-caaa8.firebasestorage.app",
-  messagingSenderId: "1090382764377",
-  appId: "1:1090382764377:web:8c6b75d35248f7d1d89448",
-  measurementId: "G-ESX1LN3XV8"
+    apiKey: "AIzaSyCQRX7XFYsFqHtPglFPPfvkFaswXc2vewc",
+    authDomain: "pokerstats-caaa8.firebaseapp.com",
+    projectId: "pokerstats-caaa8",
+    storageBucket: "pokerstats-caaa8.firebasestorage.app",
+    messagingSenderId: "1090382764377",
+    appId: "1:1090382764377:web:8c6b75d35248f7d1d89448",
+    measurementId: "G-ESX1LN3XV8"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -26,6 +26,8 @@ document.addEventListener("click", function(e) {
     var m = document.getElementById("login-menu");
     if (g && m && !g.contains(e.target)) m.classList.remove("open");
 });
+
+// 🛑 CORRECTION LOGIN : On utilise Redirect au lieu de Popup
 function login(mode) {
     var m = document.getElementById("login-menu"); 
     if(m) m.classList.remove("open");
@@ -35,33 +37,48 @@ function login(mode) {
         provider.setCustomParameters({ login_hint: GUEST_EMAIL });
     }
     
-    auth.signInWithPopup(provider).catch(function(err) {
-        if (err.code !== "auth/popup-closed-by-user") alert("Erreur : " + err.message);
+    auth.signInWithRedirect(provider).catch(function(err) {
+        alert("Erreur : " + err.message);
     });
 }
+
+// --- 3. VARIABLES ET SYNCHRO MULTI-JOUEURS ---
+let sessions = [];
+let previousBr = 0;
+let dbUnsubscribe = null; // Permet de gérer proprement les connexions/déconnexions
 
 auth.onAuthStateChanged(user => {
     const entryForm = document.querySelector('.entry-form');
     const resetBtn = document.querySelector('.btn-reset');
-    if (user && user.email === ADMIN_EMAIL) {
+    
+    // Si un utilisateur autorisé est connecté (Toi ou Ton ami)
+    if (user && (user.email === ADMIN_EMAIL || user.email === GUEST_EMAIL)) {
         if(entryForm) entryForm.style.display = 'flex';
-        if(resetBtn) resetBtn.style.display = 'block';
-    } else if (user && user.email === GUEST_EMAIL) {
-        if(entryForm) entryForm.style.display = 'flex';
-        if(resetBtn) resetBtn.style.display = 'none';
+        if(resetBtn) resetBtn.style.display = (user.email === ADMIN_EMAIL) ? 'block' : 'none'; // Seul l'admin voit le bouton reset
+        
+        // On coupe une éventuelle ancienne écoute
+        if (dbUnsubscribe) dbUnsubscribe();
+        
+        // 🛑 LA MAGIE EST ICI : On récupère les données et on filtre par joueur
+        dbUnsubscribe = db.collection("sessions").orderBy("fullDate", "asc").onSnapshot((snapshot) => {
+            let allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            sessions = allDocs.filter(s => {
+                // Si la session n'a pas d'étiquette (tes vieilles sessions), elle t'appartient (ADMIN_EMAIL)
+                const sessionOwner = s.ownerEmail || ADMIN_EMAIL;
+                return sessionOwner === user.email; // On ne garde que les sessions du joueur connecté !
+            });
+            
+            updateUI(); 
+        });
+
     } else {
+        // Personne n'est connecté ou c'est un intrus
         if(entryForm) entryForm.style.display = 'none';
         if(resetBtn) resetBtn.style.display = 'none';
+        sessions = [];
+        updateUI();
     }
-});
-
-// --- 3. VARIABLES ET SYNCHRO ---
-let sessions = [];
-let previousBr = 0;
-
-db.collection("sessions").orderBy("fullDate", "asc").onSnapshot((snapshot) => {
-    sessions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    updateUI(); 
 });
 
 // --- 4. FONCTIONS UTILS ---
@@ -70,7 +87,7 @@ function setTodayDate() {
     const inputTime = document.getElementById('input-time');
     const now = new Date();
     
-    // 🛑 CORRECTION : On force l'heure et la date LOCALE (la tienne, pas celle de Londres)
+    // On force l'heure et la date LOCALE
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -113,7 +130,8 @@ function addSession() {
         gain: gain,
         rakeback: rakeback,
         stake: stake,
-        room: room
+        room: room,
+        ownerEmail: auth.currentUser.email // 👈 NOUVEAU : On enregistre qui a créé la session !
     }).then(() => {
         if(typeof playPop === "function") playPop();
         handsInput.value = ''; gainInput.value = '';
@@ -125,7 +143,6 @@ function deleteSession(id) {
     if(confirm("Supprimer ?")) db.collection("sessions").doc(id).delete();
 }
 
-// --- 5. LOGIQUE D'AFFICHAGE ---
 // --- 5. LOGIQUE D'AFFICHAGE ---
 function updateUI() {
     const filterElem = document.getElementById('global-filter');
@@ -320,16 +337,13 @@ function updateUI() {
 
 // --- 6. CHART ET AUDIO (AVEC EFFET NÉON AFFINÉ ET INTENSE - TECHNIQUE SABRE LASER) ---
 
-// 🛑 A. DÉFINITION DU PLUGIN NÉON SABRE LASER (Unique à ajouter avant la fonction renderChart)
 const neonLinePlugin = {
     id: 'neonLine',
     defaults: { 
-        // 👈 La couleur de base du néon (Bleu intense)
         neonColor: '#00aaff', 
-        // 👈 La couleur du cœur (Très pâle/blanc) pour simuler l'intensité
         coreColor: '#ccffff', 
-        ballColor: '#ffffff', // Cœur blanc boule
-        speed: 2500 // Vitesse d'animation : 2.5 secondes
+        ballColor: '#ffffff', 
+        speed: 2500 
     },
     
     afterDatasetsDraw(chart, args, options) {
@@ -337,22 +351,18 @@ const neonLinePlugin = {
         const datasetMeta = chart.getDatasetMeta(0);
         const points = datasetMeta.data;
 
-        // Sécurité : On ne dessine que s'il y a des données et si l'animation a commencé
         if (!points || points.length < 2 || chart.neonProgress === undefined) return;
 
         ctx.save();
 
-        // 🛑 B. CALCUL DU PARCOURS ANIME
-        const totalDuration = options.speed; // Durée totale de l'animation en ms
+        const totalDuration = options.speed;
         const elapsed = Date.now() - chart.neonStartTime;
-        const progress = Math.min(elapsed / totalDuration, 1); // Progression de 0 à 1
+        const progress = Math.min(elapsed / totalDuration, 1); 
         
         const endIndex = (points.length - 1) * progress;
         const integerEndIndex = Math.floor(endIndex);
         const factionalEndIndex = endIndex - integerEndIndex;
 
-        // --- C. DÉFINITION DU TRACÉ (Path) ---
-        // On crée un tracé pour le sabre laser qu'on va réutiliser pour chaque couche de lumière
         ctx.beginPath();
         for (let i = 0; i <= integerEndIndex; i++) {
             const point = points[i];
@@ -360,7 +370,6 @@ const neonLinePlugin = {
             else ctx.lineTo(point.x, point.y);
         }
         
-        // Dessine la partie fractionnaire finale pour que ce soit fluide
         if (integerEndIndex < points.length - 1) {
             const p1 = points[integerEndIndex];
             const p2 = points[integerEndIndex + 1];
@@ -369,40 +378,31 @@ const neonLinePlugin = {
             ctx.lineTo(finalX, finalY);
         }
 
-        // On retient ce tracé pour l'appliquer à toutes les couches de dessin
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        // --- D. L'EFFET NÉON PAR EMPILEMENT DE LUEURS (LA TECHNIQUE DU SABRE LASER) ---
-
-        // Couche 1 : Lueure diffuse ultra-large (Halo le plus externe)
-        ctx.lineWidth = 20; // Très large
-        ctx.strokeStyle = 'rgba(0, 150, 255, 0.08)'; // Très transparent
-        ctx.shadowColor = options.neonColor; // Bleu pur
-        ctx.shadowBlur = 40; // Flou gigantesque
+        ctx.lineWidth = 20; 
+        ctx.strokeStyle = 'rgba(0, 150, 255, 0.08)'; 
+        ctx.shadowColor = options.neonColor; 
+        ctx.shadowBlur = 40; 
         ctx.stroke();
 
-        // Couche 2 : Lueure moyenne (Halo principal)
         ctx.lineWidth = 10;
         ctx.strokeStyle = 'rgba(0, 150, 255, 0.2)'; 
         ctx.shadowBlur = 20; 
         ctx.stroke();
 
-        // Couche 3 : Cœur de lueure concentrée (Intensity)
         ctx.lineWidth = 5;
         ctx.strokeStyle = 'rgba(200, 240, 255, 0.4)'; 
         ctx.shadowBlur = 10; 
         ctx.stroke();
 
-        // Couche 4 : 🛑 LE CŒUR BLANC INTENSE ET FIN (AFFINER ET INTENSIFIER ICI)
-        ctx.lineWidth = 1.0; // 👈 🛑 ULTRA FIN pour la précision
-        ctx.strokeStyle = options.coreColor; // 👈 🛑 TRÈS CLAIR (presque blanc) pour la brillance pure
-        ctx.shadowBlur = 3; // Lueure intime juste autour
+        ctx.lineWidth = 1.0; 
+        ctx.strokeStyle = options.coreColor; 
+        ctx.shadowBlur = 3; 
         ctx.stroke();
 
-        // --- E. DESSIN DE LA BOULE DE LUMIÈRE (Renforcée) ---
         if (points.length > 0) {
-            // Calcule la position exacte de la boule au bout du parcours
             let ballX, ballY;
             if (integerEndIndex < points.length - 1) {
                 const p1 = points[integerEndIndex];
@@ -415,37 +415,32 @@ const neonLinePlugin = {
                 ballY = last.y;
             }
 
-            // Halo lumineux externe (Bleu intense)
             ctx.beginPath();
             ctx.arc(ballX, ballY, 18, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0, 100, 255, 0.1)'; // Halo doux
+            ctx.fillStyle = 'rgba(0, 100, 255, 0.1)'; 
             ctx.fill();
 
-            // Halo concentré (Intensity)
             ctx.beginPath();
             ctx.arc(ballX, ballY, 10, 0, Math.PI * 2);
             ctx.fillStyle = 'rgba(100, 240, 255, 0.3)'; 
             ctx.fill();
 
-            // Cœur brillant (Blanc pur intense - comme l'original)
             ctx.beginPath();
             ctx.arc(ballX, ballY, 6.5, 0, Math.PI * 2);
-            ctx.fillStyle = options.ballColor; // Blanc pur
-            ctx.shadowColor = '#ccffff'; // Halo brillant très clair autour
-            ctx.shadowBlur = 25; // Explosion de lumière
+            ctx.fillStyle = options.ballColor; 
+            ctx.shadowColor = '#ccffff'; 
+            ctx.shadowBlur = 25; 
             ctx.fill();
         }
 
         ctx.restore();
 
-        // 🛑 F. BOUCLE D'ANIMATION (Demande de re-dessiner le cadre suivant si pas fini)
         if (progress < 1) {
             requestAnimationFrame(() => chart.draw()); 
         }
     }
 };
 
-// 🛑 G. FONCTION RENDERCHART MODIFIÉE POUR CACHER L'ANCIENNE LIGNE
 function renderChart(labels, values) {
     const canvas = document.getElementById('myChart');
     if(!canvas) return;
@@ -462,9 +457,8 @@ function renderChart(labels, values) {
                 data: values,
                 pointRadius: 0,
                 pointHoverRadius: 5,
-                // 🛑 CHANGEMENT MAJEUR ICI 🛑
-                borderWidth: 0, // 👈 🛑 ON CACHE COMPLÈTEMENT LA LIGNE BLEUE EPAISSE DU GRAPHIQUE
-                borderColor: 'rgba(0,0,0,0)', // 👈 Ligne 100% transparente
+                borderWidth: 0, 
+                borderColor: 'rgba(0,0,0,0)', 
                 fill: 'start',
                 backgroundColor: 'rgba(59, 130, 246, 0.05)',
                 tension: 0.2
@@ -491,13 +485,11 @@ function renderChart(labels, values) {
                     ticks: { color: '#9ca3af' } 
                 }
             },
-            // 🛑 H. CONFIGURATION DU PLUGIN NÉON SABRE LASER
             plugins: { 
                 legend: { display: false },
-                // Active le plugin personnalisé
                 neonLine: {
-                    neonColor: '#3b82f6', // 👈 Vrai bleu du thème
-                    coreColor: '#eff6ff', // 👈 Blanc bleuté
+                    neonColor: '#3b82f6', 
+                    coreColor: '#eff6ff', 
                     ballColor: '#ffffff', 
                     speed: 2000 
                 },
@@ -517,18 +509,15 @@ function renderChart(labels, values) {
                 }
             }
         },
-        // Enregistre le plugin pour ce graphique précis
         plugins: [neonLinePlugin]
     };
 
-    // Création du chart
     window.pokerChart = new Chart(ctx, chartConfig);
     
-    // 🛑 I. DÉMARRAGE DE L'ANIMATION LORSQUE LE CHART S'AFFICHE
     if (labels.length > 1) {
-        window.pokerChart.neonProgress = 0; // Point de départ
-        window.pokerChart.neonStartTime = Date.now(); // Temps de départ
-        window.pokerChart.draw(); // Force le premier dessin pour lancer la boucle d'animation
+        window.pokerChart.neonProgress = 0; 
+        window.pokerChart.neonStartTime = Date.now(); 
+        window.pokerChart.draw(); 
     }
 }
 
@@ -740,7 +729,8 @@ function importData() {
                         fullDate: isoDate,
                         hands: parseInt(s.hands) || 0,
                         gain: gainNumber,
-                        stake: "NL2"
+                        stake: "NL2",
+                        ownerEmail: ADMIN_EMAIL // Les imports vont chez l'admin par défaut
                     });
                     count++;
                 });
@@ -771,15 +761,13 @@ function playPop() {
 
 // --- 9. CALENDRIER PNL (AXIOM STYLE) ---
 let currentCalDate = new Date(); 
-currentCalDate.setDate(1); // 👈 SÉCURITÉ : Empêche le bug du 31 du mois !
+currentCalDate.setDate(1); 
 
 function toggleHistoryFlip() {
     const flipper = document.getElementById('history-flipper');
     if (flipper) {
         flipper.classList.toggle('is-flipped');
         
-        // 🛑 LA MAGIE ANTI-BUG EST ICI !
-        // On désactive le bouclier invisible de la face avant pour laisser passer tes clics !
         const frontFace = flipper.querySelector('.flip-front');
         if (frontFace) {
             frontFace.style.pointerEvents = flipper.classList.contains('is-flipped') ? 'none' : 'auto';
@@ -787,18 +775,15 @@ function toggleHistoryFlip() {
     }
 }
 
-// Fonction isolée et sécurisée
 window.changeCalMonth = function(offset) {
     currentCalDate.setMonth(currentCalDate.getMonth() + offset);
     
     const filterElem = document.getElementById('global-filter');
     const filterValue = filterElem ? filterElem.value : "ALL";
 
-    // 👇 On récupère le filtre ici aussi
     const roomFilterElem = document.getElementById('room-filter');
     const roomFilterValue = roomFilterElem ? roomFilterElem.value : "ALL";
 
-    // 👇 Et on applique le double filtre
     let filteredSessions = sessions.filter(s => {
         const sessionStake = s.stake || "NL10";
         const sessionRoom = s.room || "stake";
@@ -816,24 +801,19 @@ function renderCalendar(filteredSessions) {
     const calContainer = document.getElementById('calendar-view');
     if (!calContainer) return;
 
-    // 1. On regroupe tous les gains, les limites ET le volume (mains) par jour
     const dailyData = {};
     filteredSessions.forEach(s => {
         if(!s.fullDate) return;
         const dateStr = s.fullDate.split('T')[0]; 
         
-        // 👈 Ajout de "hands: 0" dans la mémoire de chaque jour
         if (!dailyData[dateStr]) dailyData[dateStr] = { gain: 0, stakes: new Set(), hands: 0 };
         
-        // 🛑 ON SAUVEGARDE AUSSI LA ROOM ICI
         dailyData[dateStr].room = s.room;
-        
         dailyData[dateStr].gain += s.gain;
         dailyData[dateStr].stakes.add(s.stake || "NL10");
         dailyData[dateStr].hands += (parseInt(s.hands) || 0); 
     });
 
-    // 2. On configure le mois affiché
     const year = currentCalDate.getFullYear();
     const month = currentCalDate.getMonth(); 
 
@@ -843,14 +823,48 @@ function renderCalendar(filteredSessions) {
 
     const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
-    // 3. On dessine la grille et les boutons
+    let monthPnl = 0, monthHands = 0, monthSessions = 0, monthWinSessions = 0;
+    Object.entries(dailyData).forEach(([dateStr, data]) => {
+        const d = new Date(dateStr);
+        if (d.getFullYear() === year && d.getMonth() === month) {
+            monthPnl += data.gain;
+            monthHands += data.hands;
+            monthSessions++;
+            if (data.gain > 0) monthWinSessions++;
+        }
+    });
+    const monthWinrate = monthHands > 0 ? (monthPnl / (monthHands / 100)).toFixed(2) : '—';
+    const pnlColor = monthPnl > 0 ? '#4ade80' : monthPnl < 0 ? '#ff5555' : '#888';
+    const pnlSign  = monthPnl > 0 ? '+' : '';
+
     let html = `
     <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 10px 5px 10px;">
         <button type="button" onclick="window.changeCalMonth(-1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">◀</button>
         <span style="line-height: 1; transform: translateY(1px); font-weight: 800;">${monthNames[month]} ${year}</span>
         <button type="button" onclick="window.changeCalMonth(1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">▶</button>
+    </div>
+    <div style="
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); /* 👈 ON PASSE À 3 COLONNES ICI */
+        gap: 8px;
+        padding: 8px 10px 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        margin-bottom: 6px;
+    ">
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid ${pnlColor}; border-radius: 8px; padding: 8px 10px; text-align: center;">
+            <div style="font-size: 0.58rem; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">💰 PNL Mois</div>
+            <div style="font-size: 1rem; font-weight: 800; color: ${pnlColor};">${monthPnl !== 0 ? pnlSign + monthPnl.toFixed(2) + '€' : '—'}</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid rgba(59,130,246,0.6); border-radius: 8px; padding: 8px 10px; text-align: center;">
+            <div style="font-size: 0.58rem; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">📈 Volume</div>
+            <div style="font-size: 1rem; font-weight: 800; color: #fff;">${monthHands > 0 ? monthHands.toLocaleString() : '—'}</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid rgba(168,85,247,0.6); border-radius: 8px; padding: 8px 10px; text-align: center;">
+            <div style="font-size: 0.58rem; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">🏆 Sessions</div>
+            <div style="font-size: 1rem; font-weight: 800; color: #a78bfa;">${monthSessions > 0 ? monthWinSessions + '/' + monthSessions : '—'}</div>
+        </div>
     </div>`;
-    
+
     html += `<div class="calendar-grid">`;
     
     ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].forEach(d => {
@@ -861,16 +875,13 @@ function renderCalendar(filteredSessions) {
         html += `<div class="cal-day empty"></div>`;
     }
 
-    // 4. On remplit les cases du calendrier avec PNL, Limite ET Mains
     for(let d = 1; d <= daysInMonth; d++) {
         const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const data = dailyData[dateStr];
 
         let classes = "cal-day";
-        // On initialise content
         let content = `<span class="cal-date">${d}</span>`;
         
-
         if (data !== undefined) {
             const pnl = data.gain;
             const stakesStr = Array.from(data.stakes).join(' / ');
@@ -879,7 +890,6 @@ function renderCalendar(filteredSessions) {
             else if (pnl < 0) classes += " loss";
             else classes += " even";
 
-            // 🛑 AJOUT DU RESTE DES INFOS CORRECTEMENT FORMATÉES (SANS LE BADGE)
             content += `<span style="position: absolute; top: 3px; right: 4px; font-size: 0.55rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase;">${stakesStr}</span>`;
             content += `<p class="cal-pnl">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</p>`;
             content += `<span style="position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font-size: 0.6rem; color: #888; font-weight: 600;">${data.hands} h</span>`;
@@ -895,17 +905,14 @@ function renderCalendar(filteredSessions) {
 // --- 10. HORLOGE TEMPS RÉEL ---
 setTodayDate();
 
-// Met à jour l'heure automatiquement toutes les 30 secondes
 setInterval(() => {
     const dateInput = document.getElementById('input-date');
     const timeInput = document.getElementById('input-time');
-    // Sécurité : On ne met à jour QUE si tu n'es pas en train d'écrire dedans
     if (document.activeElement !== dateInput && document.activeElement !== timeInput) {
         setTodayDate();
     }
 }, 30000);
 
-// Bonus : Met à l'heure instantanément quand tu reviens sur l'onglet (Alt+Tab)
 window.addEventListener('focus', () => {
     const dateInput = document.getElementById('input-date');
     const timeInput = document.getElementById('input-time');
@@ -928,7 +935,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- 11. MODALE RANGES ET NAVIGATION ---
 window.currentRangePage = 0;
-// 👈 On met le nouveau tableau des 4 titres dans le bon ordre
 window.rangeTitles = ["🟢 Open Raise", "🚀 3bet & Défense", "🔥 Iso & Squeeze", "🧮 Équité & Maths"]; 
 
 window.openRangeModal = function() {
@@ -937,13 +943,11 @@ window.openRangeModal = function() {
         modal.classList.add('show');
         window.currentRangePage = 0;
         
-        // On cache toutes les pages pour être propre
         for(let i = 0; i <= 3; i++) {
             let p = document.getElementById('range-page-' + i);
             if(p) p.style.display = 'none';
         }
         
-        // On n'affiche que la 1ère
         document.getElementById('range-page-0').style.display = 'block';
         document.getElementById('range-page-title').innerText = window.rangeTitles[0];
     }
@@ -955,16 +959,13 @@ window.closeRangeModal = function() {
 }
 
 window.changeRangePage = function(offset) {
-    // 👈 MAGIE MATHÉMATIQUE : On remplace par 4 pour boucler sur 4 pages !
     window.currentRangePage = (window.currentRangePage + offset + 4) % 4; 
     
-    // On cache les 4 pages
     for(let i = 0; i <= 3; i++) {
         let p = document.getElementById('range-page-' + i);
         if(p) p.style.display = 'none';
     }
     
-    // On affiche la bonne page avec l'animation
     const activePage = document.getElementById('range-page-' + window.currentRangePage);
     activePage.style.display = 'block';
     
