@@ -59,23 +59,21 @@ auth.onAuthStateChanged(user => {
     const loginMenu = document.getElementById('login-menu');
 
     if (user && (user.email === ADMIN_EMAIL || user.email === GUEST_EMAIL)) {
-        const isAntoine = user.email === ADMIN_EMAIL;
         
         if (!currentViewEmail) {
             currentViewEmail = user.email; 
         }
 
-        // 🛑 MODIFICATION DES TEXTES DU MENU CONNECTÉ ICI 🛑
         if(loginMenu) {
             loginMenu.innerHTML = `
-                <button onclick="switchView('${ADMIN_EMAIL}')">📊 PrRaoult</button>
+                <button onclick="switchView('${ADMIN_EMAIL}')">📊 Admin</button>
                 <button onclick="switchView('${GUEST_EMAIL}')">👀 Piootres</button>
                 <button onclick="auth.signOut()" style="color: #ff5555; border-top: 1px solid rgba(255,255,255,0.06);">🚪 Log out</button>
             `;
         }
 
         if(entryForm) entryForm.style.display = 'flex';
-        if(resetBtn) resetBtn.style.display = isAntoine ? 'block' : 'none';
+        if(resetBtn) resetBtn.style.display = 'block'; // Tout le monde voit le bouton reset maintenant, mais il ne supprime que SES données
 
         if (dbUnsubscribe) dbUnsubscribe();
         
@@ -86,10 +84,9 @@ auth.onAuthStateChanged(user => {
 
     } else {
         currentViewEmail = null;
-        // 🛑 MODIFICATION DES TEXTES DU MENU DÉCONNECTÉ ICI 🛑
         if(loginMenu) {
             loginMenu.innerHTML = `
-                <button onclick="login('admin')">👑 PrRaoult</button>
+                <button onclick="login('admin')">👑 Admin</button>
                 <button onclick="login('guest')">🎮 Piootres</button>
             `;
         }
@@ -174,6 +171,24 @@ function deleteSession(id) {
     if(confirm("Supprimer ?")) db.collection("sessions").doc(id).delete();
 }
 
+// 🛑 SÉCURITÉ DE SUPPRESSION DE MASSE
+function resetData() {
+    if(!auth.currentUser) return;
+    if(confirm("Es-tu sûr de vouloir supprimer TOUT TON historique ? (Les stats de l'autre joueur seront conservées)")) {
+        const myEmail = auth.currentUser.email;
+        db.collection("sessions").get().then((q) => {
+            q.forEach((doc) => {
+                const s = doc.data();
+                const owner = s.ownerEmail || ADMIN_EMAIL;
+                // On ne supprime QUE les documents qui appartiennent à celui qui a cliqué
+                if (owner === myEmail) {
+                    doc.ref.delete();
+                }
+            });
+        });
+    }
+}
+
 // --- 5. LOGIQUE D'AFFICHAGE ---
 function updateUI() {
     const filterElem = document.getElementById('global-filter');
@@ -232,8 +247,6 @@ function updateUI() {
     const historyBody = document.getElementById('history-list');
     const user = auth.currentUser;
     
-    const canDelete = user && (user.email === ADMIN_EMAIL || user.email === currentViewEmail);
-    
     let rows = [];
 
     filteredSessions.forEach((s) => { 
@@ -265,6 +278,10 @@ function updateUI() {
             ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${s.rakeback.toFixed(2)}€ RB</span>`
             : '';
 
+        // 🛑 SÉCURITÉ BOUTON CROIX ROUGE : La croix ne s'affiche que si la session appartient à l'utilisateur connecté
+        const sessionOwner = s.ownerEmail || ADMIN_EMAIL;
+        const isMySession = user && user.email === sessionOwner;
+
         if (isRakebackOnly) {
             if (isGlobalView) {
                 rows.push(`<tr style="opacity: 0.5;">
@@ -275,7 +292,7 @@ function updateUI() {
                     <td style="color: #888;">—</td>
                     <td style="color: #a78bfa; font-weight: 400;">+${(s.rakeback || 0).toFixed(2)}€ RB</td>
                     <td style="color: #888;">—</td>
-                    <td>${canDelete ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
+                    <td>${isMySession ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
                 </tr>`);
             }
         } else {
@@ -291,7 +308,7 @@ function updateUI() {
                 <td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">
                     ${gainBB.toFixed(1)} BB
                 </td>
-                <td>${canDelete ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
+                <td>${isMySession ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
             </tr>`);
         }
     });
@@ -553,12 +570,6 @@ function animateValue(id, start, end, duration) {
         if (progress < 1) window.requestAnimationFrame(step);
     };
     window.requestAnimationFrame(step);
-}
-
-function resetData() {
-    if(confirm("Tout supprimer ?")) {
-        db.collection("sessions").get().then((q) => q.forEach((doc) => doc.ref.delete()));
-    }
 }
 
 // --- 7. ANIMATIONS DE FOND ---
@@ -854,7 +865,6 @@ function renderCalendar(filteredSessions) {
             if (data.gain > 0) monthWinSessions++;
         }
     });
-    const monthWinrate = monthHands > 0 ? (monthPnl / (monthHands / 100)).toFixed(2) : '—';
     const pnlColor = monthPnl > 0 ? '#4ade80' : monthPnl < 0 ? '#ff5555' : '#888';
     const pnlSign  = monthPnl > 0 ? '+' : '';
 
