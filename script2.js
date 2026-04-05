@@ -187,7 +187,8 @@ function updateUI() {
 
     const headerBadge = document.getElementById('header-badge');
     if (headerBadge) {
-        const badgeMap = { "ALL": ["NL", "badge-nl"], "NL2": ["NL2", "badge-nl2"], "NL5": ["NL5", "badge-nl5"], "NL10": ["NL10", "badge-nl10"] };
+        // 🛑 On ajoute la NL20 ici
+        const badgeMap = { "ALL": ["NL", "badge-nl"], "NL2": ["NL2", "badge-nl2"], "NL5": ["NL5", "badge-nl5"], "NL10": ["NL10", "badge-nl10"], "NL20": ["NL20", "badge-nl20"] };
         const [label, cls] = badgeMap[filterValue] || ["NL", "badge-nl"];
         headerBadge.innerText = label;
         headerBadge.className = "badge " + cls;
@@ -199,7 +200,11 @@ function updateUI() {
     const isGlobalView = (filterValue === "ALL" && roomFilterValue === "ALL");
 
     let startBR, goalBR;
-    if (filterValue === "NL10") {
+    // 🛑 On ajoute l'objectif NL20 ici
+    if (filterValue === "NL20") {
+        startBR = 1000;
+        goalBR = 2500;
+    } else if (filterValue === "NL10") {
         startBR = 500;
         goalBR = 1000;
     } else if (filterValue === "NL5") {
@@ -210,14 +215,13 @@ function updateUI() {
         goalBR = 500;  
     } else { 
         startBR = 35;  
-        goalBR = 1000; 
+        goalBR = 2500; // Vue Globale, on met l'objectif final à 2500€
     }
 
     const xpTitle = document.getElementById('xp-title-text');
     if(xpTitle) {
         xpTitle.innerHTML = `<span class="xp-start">🏁 Départ ${startBR}€</span> <span class="xp-arrow">➔</span> <span class="xp-goal">🎯 Objectif ${goalBR}€</span>`;
     }
-
     const user = auth.currentUser;
     // 🛑 LA MAGIE EST LÀ : Vérifie si le joueur regarde SES PROPRES stats
     const isLookingAtOwnStats = user && (user.email === currentViewEmail);
@@ -266,7 +270,8 @@ function updateUI() {
         profitsNet.push(parseFloat(currentProfitNet.toFixed(2)));
 
         const sessionStake = s.stake || "NL10";
-        const bbValue = (sessionStake === "NL2") ? 0.02 : (sessionStake === "NL5") ? 0.05 : 0.10;
+        // 🛑 On ajoute le calcul pour la NL20 (0.20€ la grosse blinde)
+        const bbValue = (sessionStake === "NL2") ? 0.02 : (sessionStake === "NL5") ? 0.05 : (sessionStake === "NL20") ? 0.20 : 0.10;
         const gainBB = s.gain / bbValue;
         totalBB += gainBB;
 
