@@ -1,22 +1,28 @@
 // --- 1. CONFIGURATION FIREBASE ---
 const firebaseConfig = {
-    apiKey: "AIzaSyCQRX7XFYsFqHtPglFPPfvkFaswXc2vewc",
-    authDomain: "pokerstats-caaa8.firebaseapp.com",
-    projectId: "pokerstats-caaa8",
-    storageBucket: "pokerstats-caaa8.firebasestorage.app",
-    messagingSenderId: "1090382764377",
-    appId: "1:1090382764377:web:8c6b75d35248f7d1d89448",
-    measurementId: "G-ESX1LN3XV8"
+  apiKey: "AIzaSyCQRX7XFYsFqHtPglFPPfvkFaswXc2vewc",
+  authDomain: "pokerstats-caaa8.firebaseapp.com",
+  projectId: "pokerstats-caaa8",
+  storageBucket: "pokerstats-caaa8.firebasestorage.app",
+  messagingSenderId: "1090382764377",
+  appId: "1:1090382764377:web:8c6b75d35248f7d1d89448",
+  measurementId: "G-ESX1LN3XV8"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// --- 2. SÉCURITÉ ADMIN ---
+// --- 2. SÉCURITÉ ADMIN & VARIABLES ---
 const ADMIN_EMAIL = "plessier.antoine10@gmail.com";
 const GUEST_EMAIL  = "strategos.grepolis@gmail.com";
 
+let allSessionsDB = []; 
+let currentViewEmail = null; 
+let previousBr = 0;
+let dbUnsubscribe = null; 
+
+// --- 3. LE MENU DÉROULANT ---
 function toggleLoginMenu() {
     var m = document.getElementById("login-menu");
     if (m) m.classList.toggle("open");
@@ -27,59 +33,80 @@ document.addEventListener("click", function(e) {
     if (g && m && !g.contains(e.target)) m.classList.remove("open");
 });
 
-// 🛑 CORRECTION LOGIN : On utilise Redirect au lieu de Popup
 function login(mode) {
-    var m = document.getElementById("login-menu"); 
-    if(m) m.classList.remove("open");
-    
+    var m = document.getElementById("login-menu"); if(m) m.classList.remove("open");
     var provider = new firebase.auth.GoogleAuthProvider();
-    if (mode === "guest") {
-        provider.setCustomParameters({ login_hint: GUEST_EMAIL });
-    }
+    if (mode === "guest") provider.setCustomParameters({ login_hint: GUEST_EMAIL });
     
-    auth.signInWithRedirect(provider).catch(function(err) {
-        alert("Erreur : " + err.message);
+    auth.signInWithPopup(provider).catch(function(err) {
+        if (err.code !== "auth/popup-closed-by-user") {
+            console.warn("Popup bloqué, redirection...", err);
+            auth.signInWithRedirect(provider);
+        }
     });
 }
 
-// --- 3. VARIABLES ET SYNCHRO MULTI-JOUEURS ---
-let sessions = [];
-let previousBr = 0;
-let dbUnsubscribe = null; // Permet de gérer proprement les connexions/déconnexions
+window.switchView = function(targetEmail) {
+    currentViewEmail = targetEmail;
+    var m = document.getElementById("login-menu"); 
+    if(m) m.classList.remove("open");
+    updateUI(); 
+};
 
 auth.onAuthStateChanged(user => {
     const entryForm = document.querySelector('.entry-form');
     const resetBtn = document.querySelector('.btn-reset');
-    
-    // Si un utilisateur autorisé est connecté (Toi ou Ton ami)
+    const loginMenu = document.getElementById('login-menu');
+
     if (user && (user.email === ADMIN_EMAIL || user.email === GUEST_EMAIL)) {
-        if(entryForm) entryForm.style.display = 'flex';
-        if(resetBtn) resetBtn.style.display = (user.email === ADMIN_EMAIL) ? 'block' : 'none'; // Seul l'admin voit le bouton reset
+        const isAntoine = user.email === ADMIN_EMAIL;
         
-        // On coupe une éventuelle ancienne écoute
+        if (!currentViewEmail) {
+            currentViewEmail = user.email; 
+        }
+
+        // 🛑 MODIFICATION DES TEXTES DU MENU CONNECTÉ ICI 🛑
+        if(loginMenu) {
+            loginMenu.innerHTML = `
+                <button onclick="switchView('${ADMIN_EMAIL}')">📊 PrRaoult</button>
+                <button onclick="switchView('${GUEST_EMAIL}')">👀 Piootres</button>
+                <button onclick="auth.signOut()" style="color: #ff5555; border-top: 1px solid rgba(255,255,255,0.06);">🚪 Log out</button>
+            `;
+        }
+
+        if(entryForm) entryForm.style.display = 'flex';
+        if(resetBtn) resetBtn.style.display = isAntoine ? 'block' : 'none';
+
         if (dbUnsubscribe) dbUnsubscribe();
         
-        // 🛑 LA MAGIE EST ICI : On récupère les données et on filtre par joueur
         dbUnsubscribe = db.collection("sessions").orderBy("fullDate", "asc").onSnapshot((snapshot) => {
-            let allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            sessions = allDocs.filter(s => {
-                // Si la session n'a pas d'étiquette (tes vieilles sessions), elle t'appartient (ADMIN_EMAIL)
-                const sessionOwner = s.ownerEmail || ADMIN_EMAIL;
-                return sessionOwner === user.email; // On ne garde que les sessions du joueur connecté !
-            });
-            
+            allSessionsDB = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             updateUI(); 
         });
 
     } else {
-        // Personne n'est connecté ou c'est un intrus
+        currentViewEmail = null;
+        // 🛑 MODIFICATION DES TEXTES DU MENU DÉCONNECTÉ ICI 🛑
+        if(loginMenu) {
+            loginMenu.innerHTML = `
+                <button onclick="login('admin')">👑 PrRaoult</button>
+                <button onclick="login('guest')">🎮 Piootres</button>
+            `;
+        }
         if(entryForm) entryForm.style.display = 'none';
         if(resetBtn) resetBtn.style.display = 'none';
-        sessions = [];
+        allSessionsDB = [];
         updateUI();
     }
 });
+
+function getTargetUserSessions() {
+    if (!currentViewEmail) return [];
+    return allSessionsDB.filter(s => {
+        const sessionOwner = s.ownerEmail || ADMIN_EMAIL; 
+        return sessionOwner === currentViewEmail;
+    });
+}
 
 // --- 4. FONCTIONS UTILS ---
 function setTodayDate() {
@@ -87,7 +114,6 @@ function setTodayDate() {
     const inputTime = document.getElementById('input-time');
     const now = new Date();
     
-    // On force l'heure et la date LOCALE
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -118,6 +144,10 @@ function addSession() {
 
     if (!rawDate || !rawTime) return alert("Remplis la date et l'heure !");
 
+    if (auth.currentUser && currentViewEmail !== auth.currentUser.email) {
+        return alert("Attention ! Tu regardes les stats de l'autre joueur. Repasse sur tes propres stats (via le menu) pour ajouter une session.");
+    }
+
     const now = new Date();
     const sec = String(now.getSeconds()).padStart(2, '0');
     const ms = String(now.getMilliseconds()).padStart(3, '0');
@@ -131,7 +161,7 @@ function addSession() {
         rakeback: rakeback,
         stake: stake,
         room: room,
-        ownerEmail: auth.currentUser.email // 👈 NOUVEAU : On enregistre qui a créé la session !
+        ownerEmail: auth.currentUser.email 
     }).then(() => {
         if(typeof playPop === "function") playPop();
         handsInput.value = ''; gainInput.value = '';
@@ -139,6 +169,7 @@ function addSession() {
         setTodayDate(); 
     });
 }
+
 function deleteSession(id) {
     if(confirm("Supprimer ?")) db.collection("sessions").doc(id).delete();
 }
@@ -148,7 +179,6 @@ function updateUI() {
     const filterElem = document.getElementById('global-filter');
     const filterValue = filterElem ? filterElem.value : "ALL";
 
-    // Mise à jour du badge couleur dans le header
     const headerBadge = document.getElementById('header-badge');
     if (headerBadge) {
         const badgeMap = { "ALL": ["NL", "badge-nl"], "NL2": ["NL2", "badge-nl2"], "NL5": ["NL5", "badge-nl5"], "NL10": ["NL10", "badge-nl10"] };
@@ -157,11 +187,9 @@ function updateUI() {
         headerBadge.className = "badge " + cls;
     }
 
-    // ON RÉCUPÈRE LE NOUVEAU FILTRE DE ROOM
     const roomFilterElem = document.getElementById('room-filter');
     const roomFilterValue = roomFilterElem ? roomFilterElem.value : "ALL";
 
-    // 🛑 ON DÉFINIT LA VUE GLOBALE DÈS LE DÉBUT 🛑
     const isGlobalView = (filterValue === "ALL" && roomFilterValue === "ALL");
 
     let startBR, goalBR;
@@ -184,8 +212,7 @@ function updateUI() {
         xpTitle.innerHTML = `<span class="xp-start">🏁 Départ ${startBR}€</span> <span class="xp-arrow">➔</span> <span class="xp-goal">🎯 Objectif ${goalBR}€</span>`;
     }
 
-    // ON APPLIQUE LE DOUBLE FILTRE (Limite + Room)
-    let filteredSessions = sessions.filter(s => {
+    let filteredSessions = getTargetUserSessions().filter(s => {
         const sessionStake = s.stake || "NL10";
         const sessionRoom = s.room || "stake";
 
@@ -204,7 +231,9 @@ function updateUI() {
 
     const historyBody = document.getElementById('history-list');
     const user = auth.currentUser;
-    const isAntoine = user && (user.email === ADMIN_EMAIL || user.email === GUEST_EMAIL);
+    
+    const canDelete = user && (user.email === ADMIN_EMAIL || user.email === currentViewEmail);
+    
     let rows = [];
 
     filteredSessions.forEach((s) => { 
@@ -215,7 +244,6 @@ function updateUI() {
         
         if (s.gain > 0) winningSessions++;
         
-        // On ne compte pas le pur rakeback dans les records
         if (!(sHands === 0 && s.gain === 0)) {
             if (s.gain > bestGain) { bestGain = s.gain; bestSession = s; }
             if (s.gain < worstGain) { worstGain = s.gain; worstSession = s; }
@@ -233,14 +261,12 @@ function updateUI() {
         const currentRoom = s.room || 'stake';
         const roomIcon = currentRoom === 'coinpoker' ? '🪙' : '🎲';
 
-        // 🛑 LE BADGE RAKEBACK (Ligne classique) : Masqué si pas en vue globale
         const rakebackBadge = (isGlobalView && s.rakeback && s.rakeback > 0)
             ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${s.rakeback.toFixed(2)}€ RB</span>`
             : '';
 
         if (isRakebackOnly) {
-            // 🛑 LA LIGNE "RB ONLY" : Masquée si pas en vue globale
-            if (isAntoine && isGlobalView) {
+            if (isGlobalView) {
                 rows.push(`<tr style="opacity: 0.5;">
                     <td style="color: #888; font-weight: 400;">
                         ${s.date} <br>
@@ -249,7 +275,7 @@ function updateUI() {
                     <td style="color: #888;">—</td>
                     <td style="color: #a78bfa; font-weight: 400;">+${(s.rakeback || 0).toFixed(2)}€ RB</td>
                     <td style="color: #888;">—</td>
-                    <td><button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button></td>
+                    <td>${canDelete ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
                 </tr>`);
             }
         } else {
@@ -265,7 +291,7 @@ function updateUI() {
                 <td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">
                     ${gainBB.toFixed(1)} BB
                 </td>
-                <td>${isAntoine ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
+                <td>${canDelete ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
             </tr>`);
         }
     });
@@ -291,7 +317,6 @@ function updateUI() {
 
     const brElem = document.getElementById('total-br');
     if(brElem) {
-        // Bankroll = gains de jeu (+ Rakeback SEULEMENT si on est en Vue Globale)
         const newBr = startBR + currentProfitNet + (isGlobalView ? totalRakeback : 0);
         if (previousBr === 0) {
             setTimeout(() => { animateValue('total-br', startBR, newBr, 1500); }, 1200);
@@ -303,7 +328,6 @@ function updateUI() {
         previousBr = newBr; 
     }
 
-    // Rakeback affiché uniquement en Vue Globale
     const rakebackElem = document.getElementById('total-rakeback');
     const rakebackCard = document.getElementById('rakeback-card');
     if(rakebackElem) {
@@ -316,7 +340,6 @@ function updateUI() {
     
     document.getElementById('total-volume').innerText = totalHands.toLocaleString();
     
-    // Winrate = pure performance aux cartes (Rakeback toujours exclu)
     let winrate = totalHands > 0 ? totalBB / (totalHands / 100) : 0;
     const winrateElem = document.getElementById('winrate');
     winrateElem.innerText = (winrate >= 0 ? '+' : '') + winrate.toFixed(2) + " bb/100";
@@ -325,7 +348,6 @@ function updateUI() {
     let successRate = filteredSessions.length > 0 ? (winningSessions / filteredSessions.length) * 100 : 0;
     document.getElementById('success-rate').innerText = successRate.toFixed(1) + "%";
     
-    // Progression de la barre XP = calculée avec le rakeback SEULEMENT en Vue Globale
     let prog = ((currentProfitNet + (isGlobalView ? totalRakeback : 0)) / (goalBR - startBR)) * 100;
     let displayProg = Math.min(100, Math.max(0, prog)); 
     document.getElementById('br-progression-text').innerText = displayProg.toFixed(1) + "%";
@@ -335,15 +357,14 @@ function updateUI() {
     renderChart(handsLabels, profitsNet);
 }
 
-// --- 6. CHART ET AUDIO (AVEC EFFET NÉON AFFINÉ ET INTENSE - TECHNIQUE SABRE LASER) ---
-
+// --- 6. CHART ET AUDIO ---
 const neonLinePlugin = {
     id: 'neonLine',
     defaults: { 
         neonColor: '#00aaff', 
         coreColor: '#ccffff', 
-        ballColor: '#ffffff', 
-        speed: 2500 
+        ballColor: '#ffffff',
+        speed: 2500
     },
     
     afterDatasetsDraw(chart, args, options) {
@@ -357,7 +378,7 @@ const neonLinePlugin = {
 
         const totalDuration = options.speed;
         const elapsed = Date.now() - chart.neonStartTime;
-        const progress = Math.min(elapsed / totalDuration, 1); 
+        const progress = Math.min(elapsed / totalDuration, 1);
         
         const endIndex = (points.length - 1) * progress;
         const integerEndIndex = Math.floor(endIndex);
@@ -381,10 +402,10 @@ const neonLinePlugin = {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        ctx.lineWidth = 20; 
-        ctx.strokeStyle = 'rgba(0, 150, 255, 0.08)'; 
-        ctx.shadowColor = options.neonColor; 
-        ctx.shadowBlur = 40; 
+        ctx.lineWidth = 20;
+        ctx.strokeStyle = 'rgba(0, 150, 255, 0.08)';
+        ctx.shadowColor = options.neonColor;
+        ctx.shadowBlur = 40;
         ctx.stroke();
 
         ctx.lineWidth = 10;
@@ -397,9 +418,9 @@ const neonLinePlugin = {
         ctx.shadowBlur = 10; 
         ctx.stroke();
 
-        ctx.lineWidth = 1.0; 
-        ctx.strokeStyle = options.coreColor; 
-        ctx.shadowBlur = 3; 
+        ctx.lineWidth = 1.0;
+        ctx.strokeStyle = options.coreColor;
+        ctx.shadowBlur = 3;
         ctx.stroke();
 
         if (points.length > 0) {
@@ -417,7 +438,7 @@ const neonLinePlugin = {
 
             ctx.beginPath();
             ctx.arc(ballX, ballY, 18, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0, 100, 255, 0.1)'; 
+            ctx.fillStyle = 'rgba(0, 100, 255, 0.1)';
             ctx.fill();
 
             ctx.beginPath();
@@ -427,9 +448,9 @@ const neonLinePlugin = {
 
             ctx.beginPath();
             ctx.arc(ballX, ballY, 6.5, 0, Math.PI * 2);
-            ctx.fillStyle = options.ballColor; 
-            ctx.shadowColor = '#ccffff'; 
-            ctx.shadowBlur = 25; 
+            ctx.fillStyle = options.ballColor;
+            ctx.shadowColor = '#ccffff';
+            ctx.shadowBlur = 25;
             ctx.fill();
         }
 
@@ -457,8 +478,8 @@ function renderChart(labels, values) {
                 data: values,
                 pointRadius: 0,
                 pointHoverRadius: 5,
-                borderWidth: 0, 
-                borderColor: 'rgba(0,0,0,0)', 
+                borderWidth: 0,
+                borderColor: 'rgba(0,0,0,0)',
                 fill: 'start',
                 backgroundColor: 'rgba(59, 130, 246, 0.05)',
                 tension: 0.2
@@ -488,8 +509,8 @@ function renderChart(labels, values) {
             plugins: { 
                 legend: { display: false },
                 neonLine: {
-                    neonColor: '#3b82f6', 
-                    coreColor: '#eff6ff', 
+                    neonColor: '#3b82f6',
+                    coreColor: '#eff6ff',
                     ballColor: '#ffffff', 
                     speed: 2000 
                 },
@@ -515,9 +536,9 @@ function renderChart(labels, values) {
     window.pokerChart = new Chart(ctx, chartConfig);
     
     if (labels.length > 1) {
-        window.pokerChart.neonProgress = 0; 
-        window.pokerChart.neonStartTime = Date.now(); 
-        window.pokerChart.draw(); 
+        window.pokerChart.neonProgress = 0;
+        window.pokerChart.neonStartTime = Date.now();
+        window.pokerChart.draw();
     }
 }
 
@@ -671,7 +692,7 @@ function exportData() {
     if (!auth.currentUser || auth.currentUser.email !== ADMIN_EMAIL) {
         return alert("Seul l'admin peut exporter les données.");
     }
-    const dataStr = JSON.stringify(sessions, null, 2);
+    const dataStr = JSON.stringify(allSessionsDB, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const downloadNode = document.createElement('a');
@@ -784,7 +805,7 @@ window.changeCalMonth = function(offset) {
     const roomFilterElem = document.getElementById('room-filter');
     const roomFilterValue = roomFilterElem ? roomFilterElem.value : "ALL";
 
-    let filteredSessions = sessions.filter(s => {
+    let filteredSessions = getTargetUserSessions().filter(s => {
         const sessionStake = s.stake || "NL10";
         const sessionRoom = s.room || "stake";
 
@@ -845,7 +866,7 @@ function renderCalendar(filteredSessions) {
     </div>
     <div style="
         display: grid;
-        grid-template-columns: repeat(3, 1fr); /* 👈 ON PASSE À 3 COLONNES ICI */
+        grid-template-columns: repeat(3, 1fr);
         gap: 8px;
         padding: 8px 10px 10px;
         border-bottom: 1px solid rgba(255,255,255,0.06);
