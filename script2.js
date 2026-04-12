@@ -367,7 +367,6 @@ function updateUI() {
     document.getElementById('progress-bar-fill').style.width = displayProg + "%";
 
     renderCalendar(filteredSessions);
-    // 🛑 ON PASSE LE FILTRE ACTUEL AU GRAPHIQUE POUR QU'IL CHANGE DE COULEUR 🛑
     renderChart(handsLabels, profitsNet, filterValue);
 }
 
@@ -476,7 +475,6 @@ const neonLinePlugin = {
     }
 };
 
-// 🛑 NOUVELLE FONCTION RENDERCHART AVEC COULEURS DYNAMIQUES 🛑
 function renderChart(labels, values, filterValue = "ALL") {
     const canvas = document.getElementById('myChart');
     if(!canvas) return;
@@ -531,7 +529,7 @@ function renderChart(labels, values, filterValue = "ALL") {
                 borderWidth: 0,
                 borderColor: 'rgba(0,0,0,0)',
                 fill: 'start',
-                backgroundColor: bgColor, // 👈 Fond sous la courbe dynamique
+                backgroundColor: bgColor, 
                 tension: 0.2
             }]
         },
@@ -544,7 +542,7 @@ function renderChart(labels, values, filterValue = "ALL") {
             scales: {
                 y: { 
                     suggestedMin: 0, 
-                    grid: { color: gridColor }, // 👈 Lignes de fond dynamiques
+                    grid: { color: gridColor }, 
                     ticks: { color: '#9ca3af' } 
                 },
                 x: { 
@@ -559,8 +557,8 @@ function renderChart(labels, values, filterValue = "ALL") {
             plugins: { 
                 legend: { display: false },
                 neonLine: {
-                    neonColor: themeColor, // 👈 Couleur du sabre laser dynamique
-                    coreColor: coreColor,  // 👈 Cœur du sabre dynamique
+                    neonColor: themeColor, 
+                    coreColor: coreColor,  
                     ballColor: '#ffffff', 
                     speed: 2000 
                 },
@@ -605,11 +603,71 @@ function animateValue(id, start, end, duration) {
     window.requestAnimationFrame(step);
 }
 
-// --- 7. ANIMATIONS DE FOND ---
+// --- 7. ANIMATIONS DE FOND ET NUKES ---
 const bgCanvas = document.getElementById('bg-canvas');
 if (bgCanvas) {
     const bgCtx = bgCanvas.getContext('2d');
     let stars = [], smokeTrail = [], shootingStars = [], shootingStarTimer = 0, fireballs = [], fireballTimer = 0, mouse = { x: null, y: null };
+    
+    // ☢️ VARIABLES DU CHAMPIGNON NUCLÉAIRE ☢️
+    let nukeFlash = 0;
+    let nukeParticles = [];
+
+    // ☢️ FONCTION DE DÉCLENCHEMENT DE LA BOMBE (INTENSIFIÉE) ☢️
+    window.triggerNuke = function() {
+        if(typeof playPop === "function") playPop();
+        nukeFlash = 1.2; // Flash ultra puissant
+        const cx = bgCanvas.width / 2;
+        const cy = bgCanvas.height * 0.4; 
+
+        // 1. L'Onde de choc au sol (LA BASE LARGE ET DESTRUCTRICE)
+        for(let i = 0; i < 400; i++) { // BEAUCOUP plus de particules au sol
+            const angle = (Math.random() > 0.5 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.3; // Angle très aplati
+            const speed = Math.random() * 45 + 15; // Vitesse fulgurante sur les côtés
+            nukeParticles.push({
+                x: cx,
+                y: bgCanvas.height,
+                vx: Math.cos(angle) * speed,
+                vy: -(Math.random() * 4 + 1), // Rase le sol en montant à peine
+                life: 1.0,
+                decay: Math.random() * 0.015 + 0.005, // Particules durent plus longtemps
+                size: Math.random() * 50 + 20, // Gros nuages au sol
+                // Mélange de Magma en fusion (Orange/Jaune) et de cendres sombres
+                color: Math.random() > 0.6 ? '255, 220, 100' : (Math.random() > 0.4 ? '255, 80, 0' : '100, 100, 100')
+            });
+        }
+
+        // 2. Le Tronc / Colonne (Montée depuis le sol)
+        for(let i = 0; i < 300; i++) { // Plus épaisse
+            nukeParticles.push({
+                x: cx + (Math.random() - 0.5) * 150, // Base du tronc plus large (150px d'envergure)
+                y: bgCanvas.height,
+                vx: (Math.random() - 0.5) * 8, // S'évase un peu en montant
+                vy: -(Math.random() * 25 + 10), // Monte très vite
+                life: 1.0,
+                decay: Math.random() * 0.012 + 0.006,
+                size: Math.random() * 45 + 15,
+                color: Math.random() > 0.5 ? '255, 100, 0' : '80, 80, 80'
+            });
+        }
+
+        // 3. La Corolle / Le Chapeau (L'explosion en l'air)
+        for(let i = 0; i < 500; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * 40;
+            const speed = Math.random() * 18 + 2;
+            nukeParticles.push({
+                x: cx + Math.cos(angle) * radius,
+                y: cy + Math.sin(angle) * radius,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed * 0.5 - (Math.random() * 5), 
+                life: 1.0,
+                decay: Math.random() * 0.008 + 0.003,
+                size: Math.random() * 50 + 15,
+                color: Math.random() > 0.6 ? '255, 80, 0' : (Math.random() > 0.5 ? '255, 200, 50' : '60, 60, 60')
+            });
+        }
+    };
 
     function initBg() {
         bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight;
@@ -722,6 +780,39 @@ if (bgCanvas) {
 
             if(fb.y > bgCanvas.height + 50) fireballs.splice(idx, 1);
         });
+
+        // ☢️ DESSIN DE L'EFFET NUCLÉAIRE (Par-dessus le reste) ☢️
+        if (nukeFlash > 0) {
+            bgCtx.fillStyle = `rgba(255, 255, 240, ${Math.min(nukeFlash, 1)})`; // Flash blanc aveuglant
+            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+            nukeFlash -= 0.02; // S'estompe un peu plus lentement
+        }
+
+        for (let i = 0; i < nukeParticles.length; i++) {
+            let p = nukeParticles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= p.decay;
+            p.vx *= 0.94; // Friction de l'air
+            p.vy *= 0.94;
+            
+            if (p.life <= 0) {
+                nukeParticles.splice(i, 1);
+                i--;
+            } else {
+                bgCtx.beginPath();
+                // Assure-toi que le rayon ne devient pas négatif
+                let currentRadius = Math.max(0.1, p.size * p.life);
+                bgCtx.arc(p.x, p.y, currentRadius, 0, Math.PI * 2);
+                
+                const gradient = bgCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, currentRadius);
+                gradient.addColorStop(0, `rgba(${p.color}, ${p.life})`);
+                gradient.addColorStop(1, `rgba(${p.color}, 0)`);
+                
+                bgCtx.fillStyle = gradient;
+                bgCtx.fill();
+            }
+        }
 
         requestAnimationFrame(animateBg);
     }

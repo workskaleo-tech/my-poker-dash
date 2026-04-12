@@ -94,7 +94,7 @@
             </div>
 
             <div class="records-grid">
-                <div class="record-card best-record">
+                <div class="record-card best-record" onclick="if(window.triggerNuke) window.triggerNuke()" style="cursor: pointer;" title="Cliquer pour lâcher la bombe ! ☢️">
                     <div class="record-icon">🔥</div>
                     <div class="record-info">
                         <small>Plus Gros Braquage</small>
@@ -155,7 +155,6 @@
                 <label>Rakeback (€)</label>
                 <input type="number" step="0.01" id="input-rakeback" placeholder="0.00" style="width: 110px;">
             </div>
-            
             <div class="input-group">
                 <label>Limite</label>
                 <select id="input-stake" onchange="document.getElementById('global-filter').value = this.value; updateUI();" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
