@@ -187,7 +187,6 @@ function updateUI() {
 
     const headerBadge = document.getElementById('header-badge');
     if (headerBadge) {
-        // 🛑 On ajoute la NL20 ici
         const badgeMap = { "ALL": ["NL", "badge-nl"], "NL2": ["NL2", "badge-nl2"], "NL5": ["NL5", "badge-nl5"], "NL10": ["NL10", "badge-nl10"], "NL20": ["NL20", "badge-nl20"] };
         const [label, cls] = badgeMap[filterValue] || ["NL", "badge-nl"];
         headerBadge.innerText = label;
@@ -200,7 +199,6 @@ function updateUI() {
     const isGlobalView = (filterValue === "ALL" && roomFilterValue === "ALL");
 
     let startBR, goalBR;
-    // 🛑 On ajoute l'objectif NL20 ici
     if (filterValue === "NL20") {
         startBR = 1000;
         goalBR = 2500;
@@ -215,7 +213,7 @@ function updateUI() {
         goalBR = 500;  
     } else { 
         startBR = 35;  
-        goalBR = 2500; // Vue Globale, on met l'objectif final à 2500€
+        goalBR = 2500; 
     }
 
     const xpTitle = document.getElementById('xp-title-text');
@@ -223,10 +221,8 @@ function updateUI() {
         xpTitle.innerHTML = `<span class="xp-start">🏁 Départ ${startBR}€</span> <span class="xp-arrow">➔</span> <span class="xp-goal">🎯 Objectif ${goalBR}€</span>`;
     }
     const user = auth.currentUser;
-    // 🛑 LA MAGIE EST LÀ : Vérifie si le joueur regarde SES PROPRES stats
     const isLookingAtOwnStats = user && (user.email === currentViewEmail);
 
-    // Cache/Affiche le Formulaire et le bouton de Reset selon qui on regarde !
     const entryForm = document.querySelector('.entry-form');
     const resetBtn = document.querySelector('.btn-reset');
     
@@ -270,7 +266,6 @@ function updateUI() {
         profitsNet.push(parseFloat(currentProfitNet.toFixed(2)));
 
         const sessionStake = s.stake || "NL10";
-        // 🛑 On ajoute le calcul pour la NL20 (0.20€ la grosse blinde)
         const bbValue = (sessionStake === "NL2") ? 0.02 : (sessionStake === "NL5") ? 0.05 : (sessionStake === "NL20") ? 0.20 : 0.10;
         const gainBB = s.gain / bbValue;
         totalBB += gainBB;
@@ -372,15 +367,16 @@ function updateUI() {
     document.getElementById('progress-bar-fill').style.width = displayProg + "%";
 
     renderCalendar(filteredSessions);
-    renderChart(handsLabels, profitsNet);
+    // 🛑 ON PASSE LE FILTRE ACTUEL AU GRAPHIQUE POUR QU'IL CHANGE DE COULEUR 🛑
+    renderChart(handsLabels, profitsNet, filterValue);
 }
 
-// --- 6. CHART ET AUDIO ---
+// --- 6. CHART ET AUDIO (AVEC SABRE LASER CAMÉLÉON) ---
 const neonLinePlugin = {
     id: 'neonLine',
     defaults: { 
-        neonColor: '#00aaff', 
-        coreColor: '#ccffff', 
+        neonColor: '#3b82f6', 
+        coreColor: '#eff6ff', 
         ballColor: '#ffffff',
         speed: 2500
     },
@@ -421,18 +417,18 @@ const neonLinePlugin = {
         ctx.lineJoin = 'round';
 
         ctx.lineWidth = 20;
-        ctx.strokeStyle = 'rgba(0, 150, 255, 0.08)';
+        ctx.strokeStyle = options.neonColor.replace(')', ', 0.08)').replace('rgb', 'rgba'); // Hack pour la transparence
         ctx.shadowColor = options.neonColor;
         ctx.shadowBlur = 40;
         ctx.stroke();
 
         ctx.lineWidth = 10;
-        ctx.strokeStyle = 'rgba(0, 150, 255, 0.2)'; 
+        ctx.strokeStyle = options.neonColor.replace(')', ', 0.2)').replace('rgb', 'rgba'); 
         ctx.shadowBlur = 20; 
         ctx.stroke();
 
         ctx.lineWidth = 5;
-        ctx.strokeStyle = 'rgba(200, 240, 255, 0.4)'; 
+        ctx.strokeStyle = options.coreColor.replace(')', ', 0.4)').replace('rgb', 'rgba'); 
         ctx.shadowBlur = 10; 
         ctx.stroke();
 
@@ -456,18 +452,18 @@ const neonLinePlugin = {
 
             ctx.beginPath();
             ctx.arc(ballX, ballY, 18, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0, 100, 255, 0.1)';
+            ctx.fillStyle = options.neonColor.replace(')', ', 0.1)').replace('rgb', 'rgba');
             ctx.fill();
 
             ctx.beginPath();
             ctx.arc(ballX, ballY, 10, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(100, 240, 255, 0.3)'; 
+            ctx.fillStyle = options.coreColor.replace(')', ', 0.3)').replace('rgb', 'rgba'); 
             ctx.fill();
 
             ctx.beginPath();
             ctx.arc(ballX, ballY, 6.5, 0, Math.PI * 2);
             ctx.fillStyle = options.ballColor;
-            ctx.shadowColor = '#ccffff';
+            ctx.shadowColor = options.coreColor;
             ctx.shadowBlur = 25;
             ctx.fill();
         }
@@ -480,12 +476,48 @@ const neonLinePlugin = {
     }
 };
 
-function renderChart(labels, values) {
+// 🛑 NOUVELLE FONCTION RENDERCHART AVEC COULEURS DYNAMIQUES 🛑
+function renderChart(labels, values, filterValue = "ALL") {
     const canvas = document.getElementById('myChart');
     if(!canvas) return;
     const ctx = canvas.getContext('2d');
     
     if (window.pokerChart) window.pokerChart.destroy();
+
+    // 🎨 DÉFINITION DES COULEURS SELON LA LIMITE
+    let themeColor, coreColor, bgColor, gridColor;
+    switch(filterValue) {
+        case "NL20":
+            themeColor = 'rgb(236, 72, 153)';  // Rose Néon
+            coreColor = 'rgb(253, 242, 248)';
+            bgColor = 'rgba(236, 72, 153, 0.05)';
+            gridColor = 'rgba(236, 72, 153, 0.1)';
+            break;
+        case "NL10":
+            themeColor = 'rgb(168, 85, 247)';  // Violet
+            coreColor = 'rgb(250, 245, 255)';
+            bgColor = 'rgba(168, 85, 247, 0.05)';
+            gridColor = 'rgba(168, 85, 247, 0.1)';
+            break;
+        case "NL5":
+            themeColor = 'rgb(245, 158, 11)';  // Orange
+            coreColor = 'rgb(255, 251, 235)';
+            bgColor = 'rgba(245, 158, 11, 0.05)';
+            gridColor = 'rgba(245, 158, 11, 0.1)';
+            break;
+        case "NL2":
+            themeColor = 'rgb(34, 197, 94)';   // Vert
+            coreColor = 'rgb(240, 253, 244)';
+            bgColor = 'rgba(34, 197, 94, 0.05)';
+            gridColor = 'rgba(34, 197, 94, 0.1)';
+            break;
+        default: // "ALL"
+            themeColor = 'rgb(59, 130, 246)';  // Bleu
+            coreColor = 'rgb(239, 246, 255)';
+            bgColor = 'rgba(59, 130, 246, 0.05)';
+            gridColor = 'rgba(59, 130, 246, 0.1)';
+            break;
+    }
     
     const chartConfig = {
         type: 'line',
@@ -499,7 +531,7 @@ function renderChart(labels, values) {
                 borderWidth: 0,
                 borderColor: 'rgba(0,0,0,0)',
                 fill: 'start',
-                backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                backgroundColor: bgColor, // 👈 Fond sous la courbe dynamique
                 tension: 0.2
             }]
         },
@@ -512,7 +544,7 @@ function renderChart(labels, values) {
             scales: {
                 y: { 
                     suggestedMin: 0, 
-                    grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
+                    grid: { color: gridColor }, // 👈 Lignes de fond dynamiques
                     ticks: { color: '#9ca3af' } 
                 },
                 x: { 
@@ -527,8 +559,8 @@ function renderChart(labels, values) {
             plugins: { 
                 legend: { display: false },
                 neonLine: {
-                    neonColor: '#3b82f6',
-                    coreColor: '#eff6ff',
+                    neonColor: themeColor, // 👈 Couleur du sabre laser dynamique
+                    coreColor: coreColor,  // 👈 Cœur du sabre dynamique
                     ballColor: '#ffffff', 
                     speed: 2000 
                 },

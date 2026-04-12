@@ -12,7 +12,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
     
     <script>
-        // Force le navigateur à toujours télécharger le tout dernier CSS
         document.write('<link rel="stylesheet" href="style.css?t=' + new Date().getTime() + '">');
     </script>
 </head>
@@ -22,54 +21,54 @@
     <div class="container">
         <header>
            <div class="header-top">
-    <div class="logo-group">
-        <h1 class="logo-text" style="margin: 0;">POKER<span>STATS</span></h1>
-        <span class="badge badge-nl" id="header-badge">NL</span>
-    </div>
-    
-    <div class="action-group">
-        <button class="btn-spy" onclick="window.open('bot.html','_blank')" title="Vue Bot">
-            <svg width="14" height="14" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 26C8 26 14 18 32 18C50 18 56 26 56 26L52 28C52 28 46 22 32 22C18 22 12 28 12 28Z" fill="#a78bfa"/>
-                <path d="M20 22C20 22 22 10 32 10C42 10 44 22 44 22Z" fill="#a78bfa"/>
-                <ellipse cx="32" cy="34" rx="12" ry="10" fill="#1a1a2e" stroke="#a78bfa" stroke-width="1.5"/>
-                <rect x="18" y="30" width="10" height="7" rx="3.5" fill="#a78bfa" opacity="0.9"/>
-                <rect x="36" y="30" width="10" height="7" rx="3.5" fill="#a78bfa" opacity="0.9"/>
-                <line x1="28" y1="33.5" x2="36" y2="33.5" stroke="#a78bfa" stroke-width="1.5"/>
-                <path d="M26 40Q32 44 38 40" stroke="#a78bfa" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-                <path d="M20 43C14 46 8 52 10 60L32 56Z" fill="#a78bfa" opacity="0.7"/>
-                <path d="M44 43C50 46 56 52 54 60L32 56Z" fill="#a78bfa" opacity="0.7"/>
-                <path d="M20 43Q32 50 44 43L40 56L32 52L24 56Z" fill="#7c3aed"/>
-            </svg>
-        </button>
-        <div class="login-group" id="login-group">
-            <button class="btn-login" onclick="toggleLoginMenu()">🔐 Connexion</button>
-            <div class="login-menu" id="login-menu">
-                <button onclick="login('admin')">👑 Admin</button>
-                <button onclick="login('guest')">🎮 Invité</button>
-            </div>
-        </div>
-        <div id="logged-user-info" style="display:none; align-items:center; gap:8px;">
-            <span id="logged-label" style="font-size:0.72rem; font-weight:700; color:#888;"></span>
-            <button onclick="logoutUser()" style="background:transparent;border:1px solid #333;color:#555;border-radius:4px;padding:5px 8px;cursor:pointer;font-family:'Montserrat';font-size:0.68rem;font-weight:600;">✕</button>
-        </div>
-        <button onclick="window.open('ranges.html','_blank')" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-family: 'Montserrat';">
+                <div class="logo-group">
+                    <h1 class="logo-text" style="margin: 0;">POKER<span>STATS</span></h1>
+                    <span class="badge badge-nl" id="header-badge">NL</span>
+                </div>
+                
+                <div class="action-group">
+                    <button class="btn-spy" onclick="window.open('bot.html','_blank')" title="Vue Bot">
+                        <svg width="14" height="14" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 26C8 26 14 18 32 18C50 18 56 26 56 26L52 28C52 28 46 22 32 22C18 22 12 28 12 28Z" fill="#a78bfa"/>
+                            <path d="M20 22C20 22 22 10 32 10C42 10 44 22 44 22Z" fill="#a78bfa"/>
+                            <ellipse cx="32" cy="34" rx="12" ry="10" fill="#1a1a2e" stroke="#a78bfa" stroke-width="1.5"/>
+                            <rect x="18" y="30" width="10" height="7" rx="3.5" fill="#a78bfa" opacity="0.9"/>
+                            <rect x="36" y="30" width="10" height="7" rx="3.5" fill="#a78bfa" opacity="0.9"/>
+                            <line x1="28" y1="33.5" x2="36" y2="33.5" stroke="#a78bfa" stroke-width="1.5"/>
+                            <path d="M26 40Q32 44 38 40" stroke="#a78bfa" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                            <path d="M20 43C14 46 8 52 10 60L32 56Z" fill="#a78bfa" opacity="0.7"/>
+                            <path d="M44 43C50 46 56 52 54 60L32 56Z" fill="#a78bfa" opacity="0.7"/>
+                            <path d="M20 43Q32 50 44 43L40 56L32 52L24 56Z" fill="#7c3aed"/>
+                        </svg>
+                    </button>
+                    <div class="login-group" id="login-group">
+                        <button class="btn-login" onclick="toggleLoginMenu()">🔐 Connexion</button>
+                        <div class="login-menu" id="login-menu">
+                            <button onclick="login('admin')">👑 Admin</button>
+                            <button onclick="login('guest')">🎮 Invité</button>
+                        </div>
+                    </div>
+                    <div id="logged-user-info" style="display:none; align-items:center; gap:8px;">
+                        <span id="logged-label" style="font-size:0.72rem; font-weight:700; color:#888;"></span>
+                        <button onclick="logoutUser()" style="background:transparent;border:1px solid #333;color:#555;border-radius:4px;padding:5px 8px;cursor:pointer;font-family:'Montserrat';font-size:0.68rem;font-weight:600;">✕</button>
+                    </div>
+                    <button onclick="window.open('ranges.html','_blank')" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-family: 'Montserrat';">
                         📚 Mes Ranges
                     </button>
-        <select id="global-filter" class="filter-dropdown" onchange="updateUI()">
-    <option value="ALL" selected>Vue Globale</option>
-    <option value="NL2">Historique NL2</option>
-    <option value="NL5">Challenge NL5</option>
-    <option value="NL10">Challenge NL10</option>
-    <option value="NL20">Challenge NL20</option>
-</select>
-        <select id="room-filter" onchange="updateUI()" style="background: #222; border: 1px solid #333; color: #fff; padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-left: 10px;">
-                <option value="ALL">🌐 Toutes les rooms</option>
-                <option value="stake">🎲 Stake</option>
-                <option value="coinpoker">🪙 CoinPoker</option>
-            </select>
-    </div>
-</div>
+                    <select id="global-filter" class="filter-dropdown" onchange="updateUI()">
+                        <option value="ALL" selected>Vue Globale</option>
+                        <option value="NL2">Historique NL2</option>
+                        <option value="NL5">Challenge NL5</option>
+                        <option value="NL10">Challenge NL10</option>
+                        <option value="NL20">Challenge NL20</option>
+                    </select>
+                    <select id="room-filter" onchange="updateUI()" style="background: #222; border: 1px solid #333; color: #fff; padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-left: 10px;">
+                        <option value="ALL">🌐 Toutes les rooms</option>
+                        <option value="stake">🎲 Stake</option>
+                        <option value="coinpoker">🪙 CoinPoker</option>
+                    </select>
+                </div>
+            </div>
             
             <div class="stats-grid">
                 <div class="stat-card">
@@ -115,9 +114,9 @@
 
             <div class="xp-bar-wrapper">
                 <div class="xp-bar-header">
-    <span class="xp-title" id="xp-title-text">🎯 Objectif 1000€</span>
-    <span id="br-progression-text" class="xp-percentage">0%</span>
-</div>
+                    <span class="xp-title" id="xp-title-text">🎯 Objectif 1000€</span>
+                    <span id="br-progression-text" class="xp-percentage">0%</span>
+                </div>
                 <div class="xp-track">
                     <div class="xp-fill" id="progress-bar-fill"></div>
                 </div>
@@ -156,15 +155,17 @@
                 <label>Rakeback (€)</label>
                 <input type="number" step="0.01" id="input-rakeback" placeholder="0.00" style="width: 110px;">
             </div>
+            
             <div class="input-group">
                 <label>Limite</label>
-                <select id="input-stake" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
-    <option value="NL20">NL20 (0.20€)</option>
-    <option value="NL10">NL10 (0.10€)</option>
-    <option value="NL5">NL5 (0.05€)</option>
-    <option value="NL2">NL2 (0.02€)</option>
-</select>
+                <select id="input-stake" onchange="document.getElementById('global-filter').value = this.value; updateUI();" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
+                    <option value="NL20">NL20 (0.20€)</option>
+                    <option value="NL10">NL10 (0.10€)</option>
+                    <option value="NL5">NL5 (0.05€)</option>
+                    <option value="NL2">NL2 (0.02€)</option>
+                </select>
             </div>
+
             <div class="input-group">
                 <label>Room</label>
                 <select id="input-room" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
@@ -176,40 +177,40 @@
         </section>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0;">Historique des sessions</h3>
-                <button onclick="toggleHistoryFlip()" title="Voir le calendrier PNL" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; border-radius: 6px; padding: 6px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: 'Montserrat'; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;">
-                    PNL Card
-                </button>
-            </div>
+            <h3 style="margin: 0;">Historique des sessions</h3>
+            <button onclick="toggleHistoryFlip()" title="Voir le calendrier PNL" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; border-radius: 6px; padding: 6px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: 'Montserrat'; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;">
+                PNL Card
+            </button>
+        </div>
 
-            <div class="flip-container">
-                <div class="flip-inner" id="history-flipper">
-                    
-                    <div class="flip-front">
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Mains</th>
-                                        <th>Gain (€)</th>
-                                        <th>Gain (BB)</th> 
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="history-list"></tbody>
-                            </table>
-                        </div>
-                        <button class="btn-reset" onclick="resetData()">Réinitialiser le challenge</button>
+        <div class="flip-container">
+            <div class="flip-inner" id="history-flipper">
+                
+                <div class="flip-front">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Mains</th>
+                                    <th>Gain (€)</th>
+                                    <th>Gain (BB)</th> 
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-list"></tbody>
+                        </table>
                     </div>
-
-                    <div class="flip-back">
-                        <div id="calendar-view"></div>
-                    </div>
-
+                    <button class="btn-reset" onclick="resetData()">Réinitialiser le challenge</button>
                 </div>
+
+                <div class="flip-back">
+                    <div id="calendar-view"></div>
+                </div>
+
             </div>
-        </section>
+        </div>
+
         <div class="share-actions">
             <button class="btn-secondary" onclick="exportData()">
                 <span class="icon">📤</span> Exporter
@@ -219,7 +220,8 @@
             </button>
         </div>
     </div>
-  <div id="range-modal" class="modal-overlay">
+
+    <div id="range-modal" class="modal-overlay">
         <div class="modal-content">
             
             <div class="modal-header">
@@ -472,8 +474,10 @@
                         </div>
                     </div>
                 </div>
-</body>
-</html>
+            </div>
+        </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
