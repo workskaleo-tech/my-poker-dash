@@ -156,7 +156,6 @@ function addSession() {
         if(typeof playPop === "function") playPop();
         handsInput.value = ''; gainInput.value = '';
         if(rakebackInput) rakebackInput.value = '';
-        setTodayDate(); 
     });
 }
 
@@ -278,11 +277,16 @@ function updateUI() {
             ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${s.rakeback.toFixed(2)}€ RB</span>`
             : '';
 
+        let sessionTime = "";
+        if (s.fullDate && s.fullDate.includes('T')) {
+            sessionTime = s.fullDate.split('T')[1].substring(0, 5).replace(':', 'h');
+        }
+
         if (isRakebackOnly) {
             if (isGlobalView) {
                 rows.push(`<tr style="opacity: 0.5;">
                     <td style="color: #888; font-weight: 400;">
-                        ${s.date} <br>
+                        ${s.date} <span style="font-size:0.65rem; color:#555;">${sessionTime}</span> <br>
                         <small style="font-weight:400; color:#a78bfa;">RB only</small>
                     </td>
                     <td style="color: #888;">—</td>
@@ -294,7 +298,7 @@ function updateUI() {
         } else {
             rows.push(`<tr>
                 <td style="color: #888; font-weight: 400;">
-                    ${s.date} <br>
+                    ${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span> <br>
                     <small style="font-weight:400; color:#3b82f6;">
                         ${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span>
                     </small>
@@ -416,7 +420,7 @@ const neonLinePlugin = {
         ctx.lineJoin = 'round';
 
         ctx.lineWidth = 20;
-        ctx.strokeStyle = options.neonColor.replace(')', ', 0.08)').replace('rgb', 'rgba'); // Hack pour la transparence
+        ctx.strokeStyle = options.neonColor.replace(')', ', 0.08)').replace('rgb', 'rgba'); 
         ctx.shadowColor = options.neonColor;
         ctx.shadowBlur = 40;
         ctx.stroke();
@@ -482,35 +486,34 @@ function renderChart(labels, values, filterValue = "ALL") {
     
     if (window.pokerChart) window.pokerChart.destroy();
 
-    // 🎨 DÉFINITION DES COULEURS SELON LA LIMITE
     let themeColor, coreColor, bgColor, gridColor;
     switch(filterValue) {
         case "NL20":
-            themeColor = 'rgb(236, 72, 153)';  // Rose Néon
+            themeColor = 'rgb(236, 72, 153)'; 
             coreColor = 'rgb(253, 242, 248)';
             bgColor = 'rgba(236, 72, 153, 0.05)';
             gridColor = 'rgba(236, 72, 153, 0.1)';
             break;
         case "NL10":
-            themeColor = 'rgb(168, 85, 247)';  // Violet
+            themeColor = 'rgb(168, 85, 247)'; 
             coreColor = 'rgb(250, 245, 255)';
             bgColor = 'rgba(168, 85, 247, 0.05)';
             gridColor = 'rgba(168, 85, 247, 0.1)';
             break;
         case "NL5":
-            themeColor = 'rgb(245, 158, 11)';  // Orange
+            themeColor = 'rgb(245, 158, 11)'; 
             coreColor = 'rgb(255, 251, 235)';
             bgColor = 'rgba(245, 158, 11, 0.05)';
             gridColor = 'rgba(245, 158, 11, 0.1)';
             break;
         case "NL2":
-            themeColor = 'rgb(34, 197, 94)';   // Vert
+            themeColor = 'rgb(34, 197, 94)';  
             coreColor = 'rgb(240, 253, 244)';
             bgColor = 'rgba(34, 197, 94, 0.05)';
             gridColor = 'rgba(34, 197, 94, 0.1)';
             break;
-        default: // "ALL"
-            themeColor = 'rgb(59, 130, 246)';  // Bleu
+        default: 
+            themeColor = 'rgb(59, 130, 246)'; 
             coreColor = 'rgb(239, 246, 255)';
             bgColor = 'rgba(59, 130, 246, 0.05)';
             gridColor = 'rgba(59, 130, 246, 0.1)';
@@ -609,41 +612,36 @@ if (bgCanvas) {
     const bgCtx = bgCanvas.getContext('2d');
     let stars = [], smokeTrail = [], shootingStars = [], shootingStarTimer = 0, fireballs = [], fireballTimer = 0, mouse = { x: null, y: null };
     
-    // ☢️ VARIABLES DU CHAMPIGNON NUCLÉAIRE ☢️
     let nukeFlash = 0;
     let nukeParticles = [];
 
-    // ☢️ FONCTION DE DÉCLENCHEMENT DE LA BOMBE (INTENSIFIÉE) ☢️
     window.triggerNuke = function() {
         if(typeof playPop === "function") playPop();
-        nukeFlash = 1.2; // Flash ultra puissant
+        nukeFlash = 1.2; 
         const cx = bgCanvas.width / 2;
         const cy = bgCanvas.height * 0.4; 
 
-        // 1. L'Onde de choc au sol (LA BASE LARGE ET DESTRUCTRICE)
-        for(let i = 0; i < 400; i++) { // BEAUCOUP plus de particules au sol
-            const angle = (Math.random() > 0.5 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.3; // Angle très aplati
-            const speed = Math.random() * 45 + 15; // Vitesse fulgurante sur les côtés
+        for(let i = 0; i < 400; i++) { 
+            const angle = (Math.random() > 0.5 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.3; 
+            const speed = Math.random() * 45 + 15; 
             nukeParticles.push({
                 x: cx,
                 y: bgCanvas.height,
                 vx: Math.cos(angle) * speed,
-                vy: -(Math.random() * 4 + 1), // Rase le sol en montant à peine
+                vy: -(Math.random() * 4 + 1), 
                 life: 1.0,
-                decay: Math.random() * 0.015 + 0.005, // Particules durent plus longtemps
-                size: Math.random() * 50 + 20, // Gros nuages au sol
-                // Mélange de Magma en fusion (Orange/Jaune) et de cendres sombres
+                decay: Math.random() * 0.015 + 0.005, 
+                size: Math.random() * 50 + 20, 
                 color: Math.random() > 0.6 ? '255, 220, 100' : (Math.random() > 0.4 ? '255, 80, 0' : '100, 100, 100')
             });
         }
 
-        // 2. Le Tronc / Colonne (Montée depuis le sol)
-        for(let i = 0; i < 300; i++) { // Plus épaisse
+        for(let i = 0; i < 300; i++) { 
             nukeParticles.push({
-                x: cx + (Math.random() - 0.5) * 150, // Base du tronc plus large (150px d'envergure)
+                x: cx + (Math.random() - 0.5) * 150, 
                 y: bgCanvas.height,
-                vx: (Math.random() - 0.5) * 8, // S'évase un peu en montant
-                vy: -(Math.random() * 25 + 10), // Monte très vite
+                vx: (Math.random() - 0.5) * 8, 
+                vy: -(Math.random() * 25 + 10), 
                 life: 1.0,
                 decay: Math.random() * 0.012 + 0.006,
                 size: Math.random() * 45 + 15,
@@ -651,7 +649,6 @@ if (bgCanvas) {
             });
         }
 
-        // 3. La Corolle / Le Chapeau (L'explosion en l'air)
         for(let i = 0; i < 500; i++) {
             const angle = Math.random() * Math.PI * 2;
             const radius = Math.random() * 40;
@@ -781,11 +778,10 @@ if (bgCanvas) {
             if(fb.y > bgCanvas.height + 50) fireballs.splice(idx, 1);
         });
 
-        // ☢️ DESSIN DE L'EFFET NUCLÉAIRE (Par-dessus le reste) ☢️
         if (nukeFlash > 0) {
-            bgCtx.fillStyle = `rgba(255, 255, 240, ${Math.min(nukeFlash, 1)})`; // Flash blanc aveuglant
+            bgCtx.fillStyle = `rgba(255, 255, 240, ${Math.min(nukeFlash, 1)})`; 
             bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-            nukeFlash -= 0.02; // S'estompe un peu plus lentement
+            nukeFlash -= 0.02; 
         }
 
         for (let i = 0; i < nukeParticles.length; i++) {
@@ -793,7 +789,7 @@ if (bgCanvas) {
             p.x += p.vx;
             p.y += p.vy;
             p.life -= p.decay;
-            p.vx *= 0.94; // Friction de l'air
+            p.vx *= 0.94; 
             p.vy *= 0.94;
             
             if (p.life <= 0) {
@@ -801,7 +797,6 @@ if (bgCanvas) {
                 i--;
             } else {
                 bgCtx.beginPath();
-                // Assure-toi que le rayon ne devient pas négatif
                 let currentRadius = Math.max(0.1, p.size * p.life);
                 bgCtx.arc(p.x, p.y, currentRadius, 0, Math.PI * 2);
                 
@@ -886,7 +881,7 @@ function importData() {
                         hands: parseInt(s.hands) || 0,
                         gain: gainNumber,
                         stake: "NL2",
-                        ownerEmail: ADMIN_EMAIL // Les imports vont chez l'admin par défaut
+                        ownerEmail: ADMIN_EMAIL 
                     });
                     count++;
                 });
@@ -915,7 +910,7 @@ function playPop() {
     osc.start(); osc.stop(audioCtx.currentTime + 0.05);
 }
 
-// --- 9. CALENDRIER PNL (AXIOM STYLE) ---
+// --- 9. CALENDRIER PNL ---
 let currentCalDate = new Date(); 
 currentCalDate.setDate(1); 
 
@@ -1058,24 +1053,8 @@ function renderCalendar(filteredSessions) {
     calContainer.innerHTML = html;
 }
 
-// --- 10. HORLOGE TEMPS RÉEL ---
+// --- 10. HORLOGE TEMPS RÉEL (DÉSACTIVÉE) ---
 setTodayDate();
-
-setInterval(() => {
-    const dateInput = document.getElementById('input-date');
-    const timeInput = document.getElementById('input-time');
-    if (document.activeElement !== dateInput && document.activeElement !== timeInput) {
-        setTodayDate();
-    }
-}, 30000);
-
-window.addEventListener('focus', () => {
-    const dateInput = document.getElementById('input-date');
-    const timeInput = document.getElementById('input-time');
-    if (document.activeElement !== dateInput && document.activeElement !== timeInput) {
-        setTodayDate();
-    }
-});
 
 document.addEventListener('DOMContentLoaded', () => {
     const bankrollCard = document.querySelector('.stat-card');
