@@ -218,12 +218,14 @@ function updateUI() {
     // 🛑 GESTION DYNAMIQUE DE LA BANKROLL DE DÉPART ET D'OBJECTIF 🛑
     let defaultStart, defaultGoal;
     if (currentViewEmail === GUEST_EMAIL) {
-        if (filterValue === "NL20") { defaultStart = 500; defaultGoal = 2500; }
-        else if (filterValue === "NL10") { defaultStart = 100; defaultGoal = 1000; }
-        else if (filterValue === "NL5") { defaultStart = 50; defaultGoal = 500; }
-        else if (filterValue === "NL2") { defaultStart = 10; defaultGoal = 100; }
-        else { defaultStart = 10; defaultGoal = 2500; }
+        // Départ à 0€ pour Piootres sur toutes les limites
+        if (filterValue === "NL20") { defaultStart = 0; defaultGoal = 2500; }
+        else if (filterValue === "NL10") { defaultStart = 0; defaultGoal = 1000; }
+        else if (filterValue === "NL5") { defaultStart = 0; defaultGoal = 500; }
+        else if (filterValue === "NL2") { defaultStart = 0; defaultGoal = 100; }
+        else { defaultStart = 0; defaultGoal = 2500; }
     } else {
+        // Ta configuration reste inchangée
         if (filterValue === "NL20") { defaultStart = 1000; defaultGoal = 2500; }
         else if (filterValue === "NL10") { defaultStart = 500; defaultGoal = 1000; }
         else if (filterValue === "NL5") { defaultStart = 70; defaultGoal = 500; }
@@ -293,7 +295,7 @@ function updateUI() {
             if (sGain < worstGain) { worstGain = sGain; worstSession = s; }
         }
 
-        // On n'ajoute un point au graphique que si ce n'est pas un dépôt/retrait (sinon le graphique plante/fait une ligne droite)
+        // On n'ajoute un point au graphique que si ce n'est pas un dépôt/retrait
         if (sHands > 0 || sGain !== 0 || (!sRakeback && !sDeposit && !sWithdrawal)) {
             handsLabels.push(totalHands);
             profitsNet.push(parseFloat(currentProfitNet.toFixed(2)));
@@ -392,7 +394,6 @@ function updateUI() {
 
     const brElem = document.getElementById('total-br');
     if(brElem) {
-        // La bankroll prend maintenant en compte les dépôts et les retraits !
         const newBr = startBR + currentProfitNet + (isGlobalView ? totalRakeback : 0) + totalDeposit - totalWithdrawal;
         if (previousBr === 0) {
             setTimeout(() => { animateValue('total-br', startBR, newBr, 1500); }, 1200);
@@ -1109,6 +1110,7 @@ function renderCalendar(filteredSessions) {
 }
 
 // --- 10. HORLOGE TEMPS RÉEL (DÉSACTIVÉE) ---
+// L'appel récurrent a été supprimé ici pour ne plus écraser tes saisies de dates
 setTodayDate();
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1179,13 +1181,14 @@ window.editBankrollConfig = function() {
     const filterValue = filterElem ? filterElem.value : "ALL";
     const userKey = currentViewEmail || "default";
 
+    // Valeurs par défaut si le joueur n'a encore rien personnalisé
     let defaultStart, defaultGoal;
     if (currentViewEmail === GUEST_EMAIL) {
-        if (filterValue === "NL20") { defaultStart = 500; defaultGoal = 2500; }
-        else if (filterValue === "NL10") { defaultStart = 100; defaultGoal = 1000; }
-        else if (filterValue === "NL5") { defaultStart = 50; defaultGoal = 500; }
-        else if (filterValue === "NL2") { defaultStart = 10; defaultGoal = 100; }
-        else { defaultStart = 10; defaultGoal = 2500; }
+        if (filterValue === "NL20") { defaultStart = 0; defaultGoal = 2500; }
+        else if (filterValue === "NL10") { defaultStart = 0; defaultGoal = 1000; }
+        else if (filterValue === "NL5") { defaultStart = 0; defaultGoal = 500; }
+        else if (filterValue === "NL2") { defaultStart = 0; defaultGoal = 100; }
+        else { defaultStart = 0; defaultGoal = 2500; }
     } else {
         if (filterValue === "NL20") { defaultStart = 1000; defaultGoal = 2500; }
         else if (filterValue === "NL10") { defaultStart = 500; defaultGoal = 1000; }
@@ -1200,6 +1203,7 @@ window.editBankrollConfig = function() {
     let currentStart = savedStart !== null ? parseFloat(savedStart) : defaultStart;
     let currentGoal = savedGoal !== null ? parseFloat(savedGoal) : defaultGoal;
 
+    // Demande au joueur de modifier
     let newStart = prompt(`💰 Bankroll de DÉPART pour la limite ${filterValue} :`, currentStart);
     if (newStart !== null && newStart.trim() !== "" && !isNaN(newStart)) {
         localStorage.setItem(`startBR_${userKey}_${filterValue}`, parseFloat(newStart));
@@ -1210,5 +1214,6 @@ window.editBankrollConfig = function() {
         localStorage.setItem(`goalBR_${userKey}_${filterValue}`, parseFloat(newGoal));
     }
 
+    // Met l'affichage à jour instantanément
     updateUI();
 };
