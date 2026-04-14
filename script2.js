@@ -115,7 +115,7 @@ function setTodayDate() {
     if(inputTime) inputTime.value = `${hours}:${minutes}`;
 }
 
-// 🛑 NOUVELLE FONCTION D'AJOUT AVEC TYPE DYNAMIQUE 🛑
+// MODIFICATION: Prise en compte du nouveau menu déroulant
 function addSession() {
     const dateInput = document.getElementById('input-date');
     const timeInput = document.getElementById('input-time');
@@ -127,9 +127,9 @@ function addSession() {
     
     const rawDate = dateInput.value;
     const rawTime = timeInput.value;
-    const hands = parseInt(handsInput.value) || 0;
+    const hands = parseInt(handsInput ? handsInput.value : 0) || 0;
     const type = typeInput ? typeInput.value : "Session";
-    const amount = parseFloat(amountInput.value) || 0;
+    const amount = parseFloat(amountInput ? amountInput.value : 0) || 0;
     const stake = stakeInput ? stakeInput.value : "NL10";
     const room = roomInput ? roomInput.value : "stake";
 
@@ -142,7 +142,6 @@ function addSession() {
     let gain = 0, rakeback = 0, deposit = 0, withdrawal = 0;
     let finalHands = 0;
 
-    // Répartition de la valeur "Montant" dans la bonne colonne de la Base de Données
     if (type === "Session") {
         gain = amount;
         finalHands = hands;
@@ -172,6 +171,7 @@ function addSession() {
         ownerEmail: auth.currentUser.email 
     }).then(() => {
         if(typeof playPop === "function") playPop();
+        // Conservation de la date ! On ne vide que les cases champs.
         if(handsInput) handsInput.value = ''; 
         if(amountInput) amountInput.value = '';
     });
@@ -215,17 +215,15 @@ function updateUI() {
 
     const isGlobalView = (filterValue === "ALL" && roomFilterValue === "ALL");
 
-    // 🛑 GESTION DYNAMIQUE DE LA BANKROLL DE DÉPART ET D'OBJECTIF 🛑
+    // MODIFICATION: Bankroll dynamiques (0 par défaut pour Piootres)
     let defaultStart, defaultGoal;
     if (currentViewEmail === GUEST_EMAIL) {
-        // Départ à 0€ pour Piootres sur toutes les limites
         if (filterValue === "NL20") { defaultStart = 0; defaultGoal = 2500; }
         else if (filterValue === "NL10") { defaultStart = 0; defaultGoal = 1000; }
         else if (filterValue === "NL5") { defaultStart = 0; defaultGoal = 500; }
         else if (filterValue === "NL2") { defaultStart = 0; defaultGoal = 100; }
         else { defaultStart = 0; defaultGoal = 2500; }
     } else {
-        // Ta configuration reste inchangée
         if (filterValue === "NL20") { defaultStart = 1000; defaultGoal = 2500; }
         else if (filterValue === "NL10") { defaultStart = 500; defaultGoal = 1000; }
         else if (filterValue === "NL5") { defaultStart = 70; defaultGoal = 500; }
@@ -244,7 +242,7 @@ function updateUI() {
     if(xpTitle) {
         xpTitle.innerHTML = `<span style="cursor:pointer; display:inline-flex; align-items:center; gap:8px;" onclick="window.editBankrollConfig()" title="Modifier Départ et Objectif">🏁 Départ ${startBR}€ <span class="xp-arrow" style="margin:0 5px;">➔</span> 🎯 Objectif ${goalBR}€ <span style="font-size:0.85rem; opacity:0.8; margin-left:5px;">⚙️</span></span>`;
     }
-
+    
     const user = auth.currentUser;
     const isLookingAtOwnStats = user && (user.email === currentViewEmail);
 
@@ -295,7 +293,6 @@ function updateUI() {
             if (sGain < worstGain) { worstGain = sGain; worstSession = s; }
         }
 
-        // On n'ajoute un point au graphique que si ce n'est pas un dépôt/retrait
         if (sHands > 0 || sGain !== 0 || (!sRakeback && !sDeposit && !sWithdrawal)) {
             handsLabels.push(totalHands);
             profitsNet.push(parseFloat(currentProfitNet.toFixed(2)));
@@ -314,12 +311,13 @@ function updateUI() {
             ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${sRakeback.toFixed(2)}€ RB</span>`
             : '';
 
+        // MODIFICATION: Extraction de l'heure
         let sessionTime = "";
         if (s.fullDate && s.fullDate.includes('T')) {
             sessionTime = s.fullDate.split('T')[1].substring(0, 5).replace(':', 'h');
         }
 
-        // 🛑 NOUVEAU RENDU DE L'HISTORIQUE 🛑
+        // Affichage conditionnel dans l'historique
         if (sDeposit > 0) {
             rows.push(`<tr>
                 <td style="color: #888; font-weight: 400;">
@@ -394,6 +392,7 @@ function updateUI() {
 
     const brElem = document.getElementById('total-br');
     if(brElem) {
+        // La bankroll prend en compte Dépôts et Retraits
         const newBr = startBR + currentProfitNet + (isGlobalView ? totalRakeback : 0) + totalDeposit - totalWithdrawal;
         if (previousBr === 0) {
             setTimeout(() => { animateValue('total-br', startBR, newBr, 1500); }, 1200);
@@ -1049,24 +1048,30 @@ function renderCalendar(filteredSessions) {
     const pnlSign  = monthPnl > 0 ? '+' : '';
 
     let html = `
-    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px 10px 20px;">
-        <button type="button" onclick="window.changeCalMonth(-1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">◀</button>
-        <span style="line-height: 1; font-weight: 900; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1.5px; color: #fff;">${monthNames[month]} ${year}</span>
-        <button type="button" onclick="window.changeCalMonth(1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">▶</button>
+    <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 10px 5px 10px;">
+        <button type="button" onclick="window.changeCalMonth(-1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">◀</button>
+        <span style="line-height: 1; transform: translateY(1px); font-weight: 800;">${monthNames[month]} ${year}</span>
+        <button type="button" onclick="window.changeCalMonth(1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">▶</button>
     </div>
-    
-    <div style="display: flex; flex-direction: column; gap: 10px; padding: 0 15px; margin-bottom: 20px;">
-        <div style="background: rgba(20,20,20,0.8); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid ${pnlColor}; border-radius: 8px; padding: 12px; text-align: center;">
-            <div style="font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 4px;">💰 PNL Mois</div>
-            <div style="font-size: 1.4rem; font-weight: 900; color: ${pnlColor};">${monthPnl !== 0 ? pnlSign + monthPnl.toFixed(2) + '€' : '—'}</div>
+    <div style="
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        padding: 8px 10px 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        margin-bottom: 6px;
+    ">
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid ${pnlColor}; border-radius: 8px; padding: 8px 10px; text-align: center;">
+            <div style="font-size: 0.58rem; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">💰 PNL Mois</div>
+            <div style="font-size: 1rem; font-weight: 800; color: ${pnlColor};">${monthPnl !== 0 ? pnlSign + monthPnl.toFixed(2) + '€' : '—'}</div>
         </div>
-        <div style="background: rgba(20,20,20,0.8); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #3b82f6; border-radius: 8px; padding: 12px; text-align: center;">
-            <div style="font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 4px;">📈 Volume</div>
-            <div style="font-size: 1.4rem; font-weight: 900; color: #fff;">${monthHands > 0 ? monthHands.toLocaleString() : '—'}</div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid rgba(59,130,246,0.6); border-radius: 8px; padding: 8px 10px; text-align: center;">
+            <div style="font-size: 0.58rem; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">📈 Volume</div>
+            <div style="font-size: 1rem; font-weight: 800; color: #fff;">${monthHands > 0 ? monthHands.toLocaleString() : '—'}</div>
         </div>
-        <div style="background: rgba(20,20,20,0.8); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #a855f7; border-radius: 8px; padding: 12px; text-align: center;">
-            <div style="font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 4px;">🏆 Sessions</div>
-            <div style="font-size: 1.4rem; font-weight: 900; color: #a78bfa;">${monthSessions > 0 ? monthWinSessions + '/' + monthSessions : '—'}</div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid rgba(168,85,247,0.6); border-radius: 8px; padding: 8px 10px; text-align: center;">
+            <div style="font-size: 0.58rem; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">🏆 Sessions</div>
+            <div style="font-size: 1rem; font-weight: 800; color: #a78bfa;">${monthSessions > 0 ? monthWinSessions + '/' + monthSessions : '—'}</div>
         </div>
     </div>`;
 
@@ -1095,11 +1100,9 @@ function renderCalendar(filteredSessions) {
             else if (pnl < 0) classes += " loss";
             else classes += " even";
 
-            content += `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; width:100%; box-sizing: border-box; line-height: 1.2;">
-                <span class="cal-stake-text" style="font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 2px;">${stakesStr}</span>
-                <span class="cal-pnl-text" style="font-size: 1.15rem; font-weight: 800; color: ${pnl > 0 ? '#4ade80' : '#ff5555'}; margin-bottom: 2px;">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</span>
-                <span class="cal-hands-text" style="font-size: 0.95rem; font-weight: 500; color: #ddd;">${data.hands} h</span>
-            </div>`;
+            content += `<span style="position: absolute; top: 3px; right: 4px; font-size: 0.55rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase;">${stakesStr}</span>`;
+            content += `<p class="cal-pnl">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</p>`;
+            content += `<span style="position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font-size: 0.6rem; color: #888; font-weight: 600;">${data.hands} h</span>`;
         }
 
         html += `<div class="${classes}">${content}</div>`;
@@ -1109,8 +1112,8 @@ function renderCalendar(filteredSessions) {
     calContainer.innerHTML = html;
 }
 
-// --- 10. HORLOGE TEMPS RÉEL (DÉSACTIVÉE) ---
-// L'appel récurrent a été supprimé ici pour ne plus écraser tes saisies de dates
+// --- 10. HORLOGE TEMPS RÉEL ---
+// Seule modif ici : j'ai supprimé l'actualisation automatique de l'heure
 setTodayDate();
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1181,7 +1184,6 @@ window.editBankrollConfig = function() {
     const filterValue = filterElem ? filterElem.value : "ALL";
     const userKey = currentViewEmail || "default";
 
-    // Valeurs par défaut si le joueur n'a encore rien personnalisé
     let defaultStart, defaultGoal;
     if (currentViewEmail === GUEST_EMAIL) {
         if (filterValue === "NL20") { defaultStart = 0; defaultGoal = 2500; }
@@ -1203,7 +1205,6 @@ window.editBankrollConfig = function() {
     let currentStart = savedStart !== null ? parseFloat(savedStart) : defaultStart;
     let currentGoal = savedGoal !== null ? parseFloat(savedGoal) : defaultGoal;
 
-    // Demande au joueur de modifier
     let newStart = prompt(`💰 Bankroll de DÉPART pour la limite ${filterValue} :`, currentStart);
     if (newStart !== null && newStart.trim() !== "" && !isNaN(newStart)) {
         localStorage.setItem(`startBR_${userKey}_${filterValue}`, parseFloat(newStart));
@@ -1214,6 +1215,5 @@ window.editBankrollConfig = function() {
         localStorage.setItem(`goalBR_${userKey}_${filterValue}`, parseFloat(newGoal));
     }
 
-    // Met l'affichage à jour instantanément
     updateUI();
 };
