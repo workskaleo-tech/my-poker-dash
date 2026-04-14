@@ -115,7 +115,6 @@ function setTodayDate() {
     if(inputTime) inputTime.value = `${hours}:${minutes}`;
 }
 
-// MODIFICATION: Prise en compte du nouveau menu déroulant
 function addSession() {
     const dateInput = document.getElementById('input-date');
     const timeInput = document.getElementById('input-time');
@@ -171,7 +170,6 @@ function addSession() {
         ownerEmail: auth.currentUser.email 
     }).then(() => {
         if(typeof playPop === "function") playPop();
-        // Conservation de la date ! On ne vide que les cases champs.
         if(handsInput) handsInput.value = ''; 
         if(amountInput) amountInput.value = '';
     });
@@ -215,7 +213,6 @@ function updateUI() {
 
     const isGlobalView = (filterValue === "ALL" && roomFilterValue === "ALL");
 
-    // MODIFICATION: Bankroll dynamiques (0 par défaut pour Piootres)
     let defaultStart, defaultGoal;
     if (currentViewEmail === GUEST_EMAIL) {
         if (filterValue === "NL20") { defaultStart = 0; defaultGoal = 2500; }
@@ -238,11 +235,6 @@ function updateUI() {
     let startBR = savedStart !== null ? parseFloat(savedStart) : defaultStart;
     let goalBR = savedGoal !== null ? parseFloat(savedGoal) : defaultGoal;
 
-    const xpTitle = document.getElementById('xp-title-text');
-    if(xpTitle) {
-        xpTitle.innerHTML = `<span style="cursor:pointer; display:inline-flex; align-items:center; gap:8px;" onclick="window.editBankrollConfig()" title="Modifier Départ et Objectif">🏁 Départ ${startBR}€ <span class="xp-arrow" style="margin:0 5px;">➔</span> 🎯 Objectif ${goalBR}€ <span style="font-size:0.85rem; opacity:0.8; margin-left:5px;">⚙️</span></span>`;
-    }
-    
     const user = auth.currentUser;
     const isLookingAtOwnStats = user && (user.email === currentViewEmail);
 
@@ -311,13 +303,11 @@ function updateUI() {
             ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${sRakeback.toFixed(2)}€ RB</span>`
             : '';
 
-        // MODIFICATION: Extraction de l'heure
         let sessionTime = "";
         if (s.fullDate && s.fullDate.includes('T')) {
             sessionTime = s.fullDate.split('T')[1].substring(0, 5).replace(':', 'h');
         }
 
-        // Affichage conditionnel dans l'historique
         if (sDeposit > 0) {
             rows.push(`<tr>
                 <td style="color: #888; font-weight: 400;">
@@ -373,6 +363,24 @@ function updateUI() {
 
     if(historyBody) historyBody.innerHTML = rows.reverse().join('');
 
+    // --- CALCUL DU PROFIT NET TOTAL ---
+    const profitDepuisStart = currentProfitNet + (isGlobalView ? totalRakeback : 0);
+    const profitColor = profitDepuisStart >= 0 ? '#4ade80' : '#ff5555';
+    const profitSign = profitDepuisStart > 0 ? '+' : '';
+
+    // --- MISE À JOUR DE LA BARRE AVEC LE PROFIT ---
+    const xpTitle = document.getElementById('xp-title-text');
+    if(xpTitle) {
+        xpTitle.innerHTML = `
+            <span style="cursor:pointer; display:inline-flex; align-items:center; gap:8px;" onclick="window.editBankrollConfig()" title="Modifier Départ et Objectif">
+                🏁 Départ ${startBR}€ <span class="xp-arrow" style="margin:0 5px;">➔</span> 🎯 Objectif ${goalBR}€ <span style="font-size:0.85rem; opacity:0.8; margin-left:5px;">⚙️</span>
+            </span>
+            <span style="margin-left: 15px; padding-left: 15px; border-left: 2px solid #333; color: ${profitColor}; font-weight: 800; text-shadow: 0 0 10px ${profitColor.replace(')', ', 0.3)').replace('rgb', 'rgba')};">
+                📈 Profit : ${profitSign}${profitDepuisStart.toFixed(2)}€
+            </span>
+        `;
+    }
+
     const bestGainElem = document.getElementById('best-session-gain');
     const bestDateElem = document.getElementById('best-session-date');
     const worstGainElem = document.getElementById('worst-session-gain');
@@ -392,8 +400,7 @@ function updateUI() {
 
     const brElem = document.getElementById('total-br');
     if(brElem) {
-        // La bankroll prend en compte Dépôts et Retraits
-        const newBr = startBR + currentProfitNet + (isGlobalView ? totalRakeback : 0) + totalDeposit - totalWithdrawal;
+        const newBr = startBR + profitDepuisStart + totalDeposit - totalWithdrawal;
         if (previousBr === 0) {
             setTimeout(() => { animateValue('total-br', startBR, newBr, 1500); }, 1200);
         } else if (Math.abs(previousBr - newBr) > 300) {
@@ -424,7 +431,7 @@ function updateUI() {
     let successRate = filteredSessions.length > 0 ? (winningSessions / filteredSessions.length) * 100 : 0;
     document.getElementById('success-rate').innerText = successRate.toFixed(1) + "%";
     
-    let prog = ((currentProfitNet + (isGlobalView ? totalRakeback : 0)) / (goalBR - startBR)) * 100;
+    let prog = (profitDepuisStart / (goalBR - startBR)) * 100;
     let displayProg = Math.min(100, Math.max(0, prog)); 
     document.getElementById('br-progression-text').innerText = displayProg.toFixed(1) + "%";
     document.getElementById('progress-bar-fill').style.width = displayProg + "%";
@@ -1043,7 +1050,7 @@ function renderCalendar(filteredSessions) {
             if (data.gain > 0) monthWinSessions++;
         }
     });
-    
+    const monthWinrate = monthHands > 0 ? (monthPnl / (monthHands / 100)).toFixed(2) : '—';
     const pnlColor = monthPnl > 0 ? '#4ade80' : monthPnl < 0 ? '#ff5555' : '#888';
     const pnlSign  = monthPnl > 0 ? '+' : '';
 
@@ -1113,7 +1120,7 @@ function renderCalendar(filteredSessions) {
 }
 
 // --- 10. HORLOGE TEMPS RÉEL ---
-// Seule modif ici : j'ai supprimé l'actualisation automatique de l'heure
+// L'appel récurrent a été supprimé pour ne pas écraser tes saisies
 setTodayDate();
 
 document.addEventListener('DOMContentLoaded', () => {
