@@ -147,13 +147,19 @@
                 <label>Mains</label>
                 <input type="number" id="input-hands"> 
             </div>
+
             <div class="input-group">
-                <label>Gain (€)</label>
-                <input type="number" step="0.01" id="input-gain"> 
+                <label>Type</label>
+                <select id="input-type" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
+                    <option value="Session" selected>🃏 Session</option>
+                    <option value="Rakeback">🎁 Rakeback</option>
+                    <option value="Depot">💳 Dépôt</option>
+                    <option value="Retrait">🏦 Retrait</option>
+                </select>
             </div>
             <div class="input-group">
-                <label>Rakeback (€)</label>
-                <input type="number" step="0.01" id="input-rakeback" placeholder="0.00" style="width: 110px;">
+                <label>Montant (€)</label>
+                <input type="number" step="0.01" id="input-amount" style="width: 110px;">
             </div>
             <div class="input-group">
                 <label>Limite</label>
@@ -164,7 +170,6 @@
                     <option value="NL2" selected>NL2 (0.02€)</option>
                 </select>
             </div>
-
             <div class="input-group">
                 <label>Room</label>
                 <select id="input-room" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
@@ -480,6 +485,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="script2.js?v=5"></script>
+    <script src="script2.js?v=6"></script>
 </body>
 </html>

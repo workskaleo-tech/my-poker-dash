@@ -115,20 +115,21 @@ function setTodayDate() {
     if(inputTime) inputTime.value = `${hours}:${minutes}`;
 }
 
+// 🛑 NOUVELLE FONCTION D'AJOUT AVEC TYPE DYNAMIQUE 🛑
 function addSession() {
-    const handsInput = document.getElementById('input-hands');
-    const gainInput = document.getElementById('input-gain');
     const dateInput = document.getElementById('input-date');
     const timeInput = document.getElementById('input-time');
+    const handsInput = document.getElementById('input-hands');
+    const typeInput = document.getElementById('input-type');
+    const amountInput = document.getElementById('input-amount');
     const stakeInput = document.getElementById('input-stake');
     const roomInput = document.getElementById('input-room');
-    const rakebackInput = document.getElementById('input-rakeback');
     
-    const hands = parseInt(handsInput.value) || 0;
-    const gain = parseFloat(gainInput.value) || 0;
-    const rakeback = parseFloat(rakebackInput ? rakebackInput.value : 0) || 0;
     const rawDate = dateInput.value;
     const rawTime = timeInput.value;
+    const hands = parseInt(handsInput.value) || 0;
+    const type = typeInput ? typeInput.value : "Session";
+    const amount = parseFloat(amountInput.value) || 0;
     const stake = stakeInput ? stakeInput.value : "NL10";
     const room = roomInput ? roomInput.value : "stake";
 
@@ -136,6 +137,21 @@ function addSession() {
 
     if (auth.currentUser && currentViewEmail !== auth.currentUser.email) {
         return alert("Tu ne peux pas ajouter une session sur le profil de l'autre joueur !");
+    }
+
+    let gain = 0, rakeback = 0, deposit = 0, withdrawal = 0;
+    let finalHands = 0;
+
+    // Répartition de la valeur "Montant" dans la bonne colonne de la Base de Données
+    if (type === "Session") {
+        gain = amount;
+        finalHands = hands;
+    } else if (type === "Rakeback") {
+        rakeback = amount;
+    } else if (type === "Depot") {
+        deposit = amount;
+    } else if (type === "Retrait") {
+        withdrawal = amount;
     }
 
     const now = new Date();
@@ -146,16 +162,18 @@ function addSession() {
     db.collection("sessions").add({
         date: rawDate.split('-').reverse().slice(0,2).join('/'),
         fullDate: uniqueFullDate,
-        hands: hands,
+        hands: finalHands,
         gain: gain,
         rakeback: rakeback,
+        deposit: deposit,
+        withdrawal: withdrawal,
         stake: stake,
         room: room,
         ownerEmail: auth.currentUser.email 
     }).then(() => {
         if(typeof playPop === "function") playPop();
-        handsInput.value = ''; gainInput.value = '';
-        if(rakebackInput) rakebackInput.value = '';
+        if(handsInput) handsInput.value = ''; 
+        if(amountInput) amountInput.value = '';
     });
 }
 
@@ -197,28 +215,34 @@ function updateUI() {
 
     const isGlobalView = (filterValue === "ALL" && roomFilterValue === "ALL");
 
-    let startBR, goalBR;
-    if (filterValue === "NL20") {
-        startBR = 1000;
-        goalBR = 2500;
-    } else if (filterValue === "NL10") {
-        startBR = 500;
-        goalBR = 1000;
-    } else if (filterValue === "NL5") {
-        startBR = 70;
-        goalBR = 500;
-    } else if (filterValue === "NL2") {
-        startBR = 35;  
-        goalBR = 500;  
-    } else { 
-        startBR = 35;  
-        goalBR = 2500; 
+    // 🛑 GESTION DYNAMIQUE DE LA BANKROLL DE DÉPART ET D'OBJECTIF 🛑
+    let defaultStart, defaultGoal;
+    if (currentViewEmail === GUEST_EMAIL) {
+        if (filterValue === "NL20") { defaultStart = 500; defaultGoal = 2500; }
+        else if (filterValue === "NL10") { defaultStart = 100; defaultGoal = 1000; }
+        else if (filterValue === "NL5") { defaultStart = 50; defaultGoal = 500; }
+        else if (filterValue === "NL2") { defaultStart = 10; defaultGoal = 100; }
+        else { defaultStart = 10; defaultGoal = 2500; }
+    } else {
+        if (filterValue === "NL20") { defaultStart = 1000; defaultGoal = 2500; }
+        else if (filterValue === "NL10") { defaultStart = 500; defaultGoal = 1000; }
+        else if (filterValue === "NL5") { defaultStart = 70; defaultGoal = 500; }
+        else if (filterValue === "NL2") { defaultStart = 35; defaultGoal = 500; }
+        else { defaultStart = 35; defaultGoal = 2500; }
     }
+
+    const userKey = currentViewEmail || "default";
+    const savedStart = localStorage.getItem(`startBR_${userKey}_${filterValue}`);
+    const savedGoal = localStorage.getItem(`goalBR_${userKey}_${filterValue}`);
+
+    let startBR = savedStart !== null ? parseFloat(savedStart) : defaultStart;
+    let goalBR = savedGoal !== null ? parseFloat(savedGoal) : defaultGoal;
 
     const xpTitle = document.getElementById('xp-title-text');
     if(xpTitle) {
-        xpTitle.innerHTML = `<span class="xp-start">🏁 Départ ${startBR}€</span> <span class="xp-arrow">➔</span> <span class="xp-goal">🎯 Objectif ${goalBR}€</span>`;
+        xpTitle.innerHTML = `<span style="cursor:pointer; display:inline-flex; align-items:center; gap:8px;" onclick="window.editBankrollConfig()" title="Modifier Départ et Objectif">🏁 Départ ${startBR}€ <span class="xp-arrow" style="margin:0 5px;">➔</span> 🎯 Objectif ${goalBR}€ <span style="font-size:0.85rem; opacity:0.8; margin-left:5px;">⚙️</span></span>`;
     }
+
     const user = auth.currentUser;
     const isLookingAtOwnStats = user && (user.email === currentViewEmail);
 
@@ -241,6 +265,7 @@ function updateUI() {
     let handsLabels = [0]; let profitsNet = [0];  
     let totalHands = 0; let currentProfitNet = 0; let winningSessions = 0;
     let totalBB = 0; let totalRakeback = 0;
+    let totalDeposit = 0; let totalWithdrawal = 0;
     
     let bestGain = -Infinity, worstGain = Infinity;
     let bestSession = null, worstSession = null;
@@ -250,31 +275,41 @@ function updateUI() {
 
     filteredSessions.forEach((s) => { 
         const sHands = parseInt(s.hands) || 0;
+        const sGain = parseFloat(s.gain) || 0;
+        const sRakeback = parseFloat(s.rakeback) || 0;
+        const sDeposit = parseFloat(s.deposit) || 0;
+        const sWithdrawal = parseFloat(s.withdrawal) || 0;
+
         totalHands += sHands; 
-        currentProfitNet += s.gain;
-        totalRakeback += (s.rakeback || 0);
+        currentProfitNet += sGain;
+        totalRakeback += sRakeback;
+        totalDeposit += sDeposit;
+        totalWithdrawal += sWithdrawal;
         
-        if (s.gain > 0) winningSessions++;
+        if (sGain > 0) winningSessions++;
         
-        if (!(sHands === 0 && s.gain === 0)) {
-            if (s.gain > bestGain) { bestGain = s.gain; bestSession = s; }
-            if (s.gain < worstGain) { worstGain = s.gain; worstSession = s; }
+        if (!(sHands === 0 && sGain === 0)) {
+            if (sGain > bestGain) { bestGain = sGain; bestSession = s; }
+            if (sGain < worstGain) { worstGain = sGain; worstSession = s; }
         }
 
-        handsLabels.push(totalHands);
-        profitsNet.push(parseFloat(currentProfitNet.toFixed(2)));
+        // On n'ajoute un point au graphique que si ce n'est pas un dépôt/retrait (sinon le graphique plante/fait une ligne droite)
+        if (sHands > 0 || sGain !== 0 || (!sRakeback && !sDeposit && !sWithdrawal)) {
+            handsLabels.push(totalHands);
+            profitsNet.push(parseFloat(currentProfitNet.toFixed(2)));
+        }
 
         const sessionStake = s.stake || "NL10";
         const bbValue = (sessionStake === "NL2") ? 0.02 : (sessionStake === "NL5") ? 0.05 : (sessionStake === "NL20") ? 0.20 : 0.10;
-        const gainBB = s.gain / bbValue;
-        totalBB += gainBB;
+        const gainBB = sGain / bbValue;
+        
+        if (sHands > 0) totalBB += gainBB;
 
-        const isRakebackOnly = (sHands === 0 && s.gain === 0);
         const currentRoom = s.room || 'stake';
         const roomIcon = currentRoom === 'coinpoker' ? '🪙' : '🎲';
 
-        const rakebackBadge = (isGlobalView && s.rakeback && s.rakeback > 0)
-            ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${s.rakeback.toFixed(2)}€ RB</span>`
+        const rakebackBadge = (isGlobalView && sRakeback > 0 && sHands > 0)
+            ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${sRakeback.toFixed(2)}€ RB</span>`
             : '';
 
         let sessionTime = "";
@@ -282,15 +317,38 @@ function updateUI() {
             sessionTime = s.fullDate.split('T')[1].substring(0, 5).replace(':', 'h');
         }
 
-        if (isRakebackOnly) {
+        // 🛑 NOUVEAU RENDU DE L'HISTORIQUE 🛑
+        if (sDeposit > 0) {
+            rows.push(`<tr>
+                <td style="color: #888; font-weight: 400;">
+                    ${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span> <br>
+                    <small style="font-weight:700; color:#4ade80;">DÉPÔT</small>
+                </td>
+                <td style="color: #888;">—</td>
+                <td style="color: #4ade80; font-weight: 700;">+${sDeposit.toFixed(2)}€</td>
+                <td style="color: #888;">—</td>
+                <td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
+            </tr>`);
+        } else if (sWithdrawal > 0) {
+            rows.push(`<tr>
+                <td style="color: #888; font-weight: 400;">
+                    ${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span> <br>
+                    <small style="font-weight:700; color:#ff5555;">RETRAIT</small>
+                </td>
+                <td style="color: #888;">—</td>
+                <td style="color: #ff5555; font-weight: 700;">-${sWithdrawal.toFixed(2)}€</td>
+                <td style="color: #888;">—</td>
+                <td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
+            </tr>`);
+        } else if (sRakeback > 0 && sGain === 0 && sHands === 0) {
             if (isGlobalView) {
-                rows.push(`<tr style="opacity: 0.5;">
+                rows.push(`<tr>
                     <td style="color: #888; font-weight: 400;">
-                        ${s.date} <span style="font-size:0.65rem; color:#555;">${sessionTime}</span> <br>
-                        <small style="font-weight:400; color:#a78bfa;">RB only</small>
+                        ${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span> <br>
+                        <small style="font-weight:700; color:#a78bfa;">RAKEBACK</small>
                     </td>
                     <td style="color: #888;">—</td>
-                    <td style="color: #a78bfa; font-weight: 400;">+${(s.rakeback || 0).toFixed(2)}€ RB</td>
+                    <td style="color: #a78bfa; font-weight: 700;">+${sRakeback.toFixed(2)}€</td>
                     <td style="color: #888;">—</td>
                     <td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
                 </tr>`);
@@ -304,7 +362,7 @@ function updateUI() {
                     </small>
                 </td>
                 <td style="font-weight: 400;">${sHands.toLocaleString()}</td>
-                <td style="color: ${s.gain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${s.gain.toFixed(2)}€${rakebackBadge}</td>
+                <td style="color: ${sGain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${sGain.toFixed(2)}€${rakebackBadge}</td>
                 <td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">
                     ${gainBB.toFixed(1)} BB
                 </td>
@@ -334,7 +392,8 @@ function updateUI() {
 
     const brElem = document.getElementById('total-br');
     if(brElem) {
-        const newBr = startBR + currentProfitNet + (isGlobalView ? totalRakeback : 0);
+        // La bankroll prend maintenant en compte les dépôts et les retraits !
+        const newBr = startBR + currentProfitNet + (isGlobalView ? totalRakeback : 0) + totalDeposit - totalWithdrawal;
         if (previousBr === 0) {
             setTimeout(() => { animateValue('total-br', startBR, newBr, 1500); }, 1200);
         } else if (Math.abs(previousBr - newBr) > 300) {
@@ -984,35 +1043,29 @@ function renderCalendar(filteredSessions) {
             if (data.gain > 0) monthWinSessions++;
         }
     });
-    const monthWinrate = monthHands > 0 ? (monthPnl / (monthHands / 100)).toFixed(2) : '—';
+    
     const pnlColor = monthPnl > 0 ? '#4ade80' : monthPnl < 0 ? '#ff5555' : '#888';
     const pnlSign  = monthPnl > 0 ? '+' : '';
 
     let html = `
-    <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 10px 5px 10px;">
-        <button type="button" onclick="window.changeCalMonth(-1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">◀</button>
-        <span style="line-height: 1; transform: translateY(1px); font-weight: 800;">${monthNames[month]} ${year}</span>
-        <button type="button" onclick="window.changeCalMonth(1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">▶</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px 10px 20px;">
+        <button type="button" onclick="window.changeCalMonth(-1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">◀</button>
+        <span style="line-height: 1; font-weight: 900; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1.5px; color: #fff;">${monthNames[month]} ${year}</span>
+        <button type="button" onclick="window.changeCalMonth(1)" style="background: #222; border: 1px solid #333; color: #fff; cursor: pointer; border-radius: 6px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; z-index: 9999;">▶</button>
     </div>
-    <div style="
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-        padding: 8px 10px 10px;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-        margin-bottom: 6px;
-    ">
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid ${pnlColor}; border-radius: 8px; padding: 8px 10px; text-align: center;">
-            <div style="font-size: 0.58rem; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">💰 PNL Mois</div>
-            <div style="font-size: 1rem; font-weight: 800; color: ${pnlColor};">${monthPnl !== 0 ? pnlSign + monthPnl.toFixed(2) + '€' : '—'}</div>
+    
+    <div style="display: flex; flex-direction: column; gap: 10px; padding: 0 15px; margin-bottom: 20px;">
+        <div style="background: rgba(20,20,20,0.8); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid ${pnlColor}; border-radius: 8px; padding: 12px; text-align: center;">
+            <div style="font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 4px;">💰 PNL Mois</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: ${pnlColor};">${monthPnl !== 0 ? pnlSign + monthPnl.toFixed(2) + '€' : '—'}</div>
         </div>
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid rgba(59,130,246,0.6); border-radius: 8px; padding: 8px 10px; text-align: center;">
-            <div style="font-size: 0.58rem; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">📈 Volume</div>
-            <div style="font-size: 1rem; font-weight: 800; color: #fff;">${monthHands > 0 ? monthHands.toLocaleString() : '—'}</div>
+        <div style="background: rgba(20,20,20,0.8); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #3b82f6; border-radius: 8px; padding: 12px; text-align: center;">
+            <div style="font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 4px;">📈 Volume</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: #fff;">${monthHands > 0 ? monthHands.toLocaleString() : '—'}</div>
         </div>
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid rgba(168,85,247,0.6); border-radius: 8px; padding: 8px 10px; text-align: center;">
-            <div style="font-size: 0.58rem; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">🏆 Sessions</div>
-            <div style="font-size: 1rem; font-weight: 800; color: #a78bfa;">${monthSessions > 0 ? monthWinSessions + '/' + monthSessions : '—'}</div>
+        <div style="background: rgba(20,20,20,0.8); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #a855f7; border-radius: 8px; padding: 12px; text-align: center;">
+            <div style="font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 4px;">🏆 Sessions</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: #a78bfa;">${monthSessions > 0 ? monthWinSessions + '/' + monthSessions : '—'}</div>
         </div>
     </div>`;
 
@@ -1041,9 +1094,11 @@ function renderCalendar(filteredSessions) {
             else if (pnl < 0) classes += " loss";
             else classes += " even";
 
-            content += `<span style="position: absolute; top: 3px; right: 4px; font-size: 0.55rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase;">${stakesStr}</span>`;
-            content += `<p class="cal-pnl">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</p>`;
-            content += `<span style="position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font-size: 0.6rem; color: #888; font-weight: 600;">${data.hands} h</span>`;
+            content += `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; width:100%; box-sizing: border-box; line-height: 1.2;">
+                <span class="cal-stake-text" style="font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 2px;">${stakesStr}</span>
+                <span class="cal-pnl-text" style="font-size: 1.15rem; font-weight: 800; color: ${pnl > 0 ? '#4ade80' : '#ff5555'}; margin-bottom: 2px;">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</span>
+                <span class="cal-hands-text" style="font-size: 0.95rem; font-weight: 500; color: #ddd;">${data.hands} h</span>
+            </div>`;
         }
 
         html += `<div class="${classes}">${content}</div>`;
@@ -1117,3 +1172,43 @@ window.addEventListener('click', (e) => {
         window.closeRangeModal();
     }
 });
+
+// --- 12. CONFIGURATION DYNAMIQUE DE LA BANKROLL ---
+window.editBankrollConfig = function() {
+    const filterElem = document.getElementById('global-filter');
+    const filterValue = filterElem ? filterElem.value : "ALL";
+    const userKey = currentViewEmail || "default";
+
+    let defaultStart, defaultGoal;
+    if (currentViewEmail === GUEST_EMAIL) {
+        if (filterValue === "NL20") { defaultStart = 500; defaultGoal = 2500; }
+        else if (filterValue === "NL10") { defaultStart = 100; defaultGoal = 1000; }
+        else if (filterValue === "NL5") { defaultStart = 50; defaultGoal = 500; }
+        else if (filterValue === "NL2") { defaultStart = 10; defaultGoal = 100; }
+        else { defaultStart = 10; defaultGoal = 2500; }
+    } else {
+        if (filterValue === "NL20") { defaultStart = 1000; defaultGoal = 2500; }
+        else if (filterValue === "NL10") { defaultStart = 500; defaultGoal = 1000; }
+        else if (filterValue === "NL5") { defaultStart = 70; defaultGoal = 500; }
+        else if (filterValue === "NL2") { defaultStart = 35; defaultGoal = 500; }
+        else { defaultStart = 35; defaultGoal = 2500; }
+    }
+
+    const savedStart = localStorage.getItem(`startBR_${userKey}_${filterValue}`);
+    const savedGoal = localStorage.getItem(`goalBR_${userKey}_${filterValue}`);
+    
+    let currentStart = savedStart !== null ? parseFloat(savedStart) : defaultStart;
+    let currentGoal = savedGoal !== null ? parseFloat(savedGoal) : defaultGoal;
+
+    let newStart = prompt(`💰 Bankroll de DÉPART pour la limite ${filterValue} :`, currentStart);
+    if (newStart !== null && newStart.trim() !== "" && !isNaN(newStart)) {
+        localStorage.setItem(`startBR_${userKey}_${filterValue}`, parseFloat(newStart));
+    }
+
+    let newGoal = prompt(`🎯 OBJECTIF de Bankroll pour la limite ${filterValue} :`, currentGoal);
+    if (newGoal !== null && newGoal.trim() !== "" && !isNaN(newGoal)) {
+        localStorage.setItem(`goalBR_${userKey}_${filterValue}`, parseFloat(newGoal));
+    }
+
+    updateUI();
+};
