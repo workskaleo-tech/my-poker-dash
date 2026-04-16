@@ -149,6 +149,10 @@
             </div>
 
             <div class="input-group">
+                <label>Montant (€)</label>
+                <input type="number" step="0.01" id="input-amount" style="width: 110px;">
+            </div>
+            <div class="input-group">
                 <label>Type</label>
                 <select id="input-type" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
                     <option value="Session" selected>🃏 Session</option>
@@ -157,10 +161,7 @@
                     <option value="Retrait">🏦 Retrait</option>
                 </select>
             </div>
-            <div class="input-group">
-                <label>Montant (€)</label>
-                <input type="number" step="0.01" id="input-amount" style="width: 110px;">
-            </div>
+
             <div class="input-group">
                 <label>Limite</label>
                 <select id="input-stake" onchange="document.getElementById('global-filter').value = this.value; updateUI();" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
