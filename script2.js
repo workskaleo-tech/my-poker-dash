@@ -57,11 +57,7 @@ auth.onAuthStateChanged(user => {
     const loginMenu = document.getElementById('login-menu');
 
     if (user && (user.email === ADMIN_EMAIL || user.email === GUEST_EMAIL)) {
-        
-        if (!currentViewEmail) {
-            currentViewEmail = user.email; 
-        }
-
+        if (!currentViewEmail) { currentViewEmail = user.email; }
         if(loginMenu) {
             loginMenu.innerHTML = `
                 <button onclick="switchView('${ADMIN_EMAIL}')">📊 PrRaoult</button>
@@ -69,14 +65,11 @@ auth.onAuthStateChanged(user => {
                 <button onclick="auth.signOut()" style="color: #ff5555; border-top: 1px solid rgba(255,255,255,0.06);">🚪 Log out</button>
             `;
         }
-
         if (dbUnsubscribe) dbUnsubscribe();
-        
         dbUnsubscribe = db.collection("sessions").orderBy("fullDate", "asc").onSnapshot((snapshot) => {
             allSessionsDB = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             updateUI(); 
         });
-
     } else {
         currentViewEmail = null;
         if(loginMenu) {
@@ -103,14 +96,11 @@ function setTodayDate() {
     const inputDate = document.getElementById('input-date');
     const inputTime = document.getElementById('input-time');
     const now = new Date();
-    
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
-
     if(inputDate) inputDate.value = `${year}-${month}-${day}`;
     if(inputTime) inputTime.value = `${hours}:${minutes}`;
 }
@@ -133,24 +123,15 @@ function addSession() {
     const room = roomInput ? roomInput.value : "stake";
 
     if (!rawDate || !rawTime) return alert("Remplis la date et l'heure !");
-
-    if (auth.currentUser && currentViewEmail !== auth.currentUser.email) {
-        return alert("Tu ne peux pas ajouter une session sur le profil de l'autre joueur !");
-    }
+    if (auth.currentUser && currentViewEmail !== auth.currentUser.email) return alert("Interdit sur ce profil !");
 
     let gain = 0, rakeback = 0, deposit = 0, withdrawal = 0;
     let finalHands = 0;
 
-    if (type === "Session") {
-        gain = amount;
-        finalHands = hands;
-    } else if (type === "Rakeback") {
-        rakeback = amount;
-    } else if (type === "Depot") {
-        deposit = amount;
-    } else if (type === "Retrait") {
-        withdrawal = amount;
-    }
+    if (type === "Session") { gain = amount; finalHands = hands; } 
+    else if (type === "Rakeback") { rakeback = amount; } 
+    else if (type === "Depot") { deposit = amount; } 
+    else if (type === "Retrait") { withdrawal = amount; }
 
     const now = new Date();
     const sec = String(now.getSeconds()).padStart(2, '0');
@@ -176,20 +157,24 @@ function addSession() {
 }
 
 function deleteSession(id) {
-    if(confirm("Supprimer ?")) db.collection("sessions").doc(id).delete();
+    if(confirm("Supprimer ?")) {
+        db.collection("sessions").doc(id).delete();
+        const modal = document.getElementById('session-modal-shell');
+        if (modal) {
+            modal.classList.remove('show');
+            setTimeout(() => { modal.style.display = 'none'; }, 300);
+        }
+    }
 }
 
 function resetData() {
     if(!auth.currentUser) return;
-    if(confirm("Es-tu sûr de vouloir supprimer TOUT TON historique ? (Les stats de l'autre joueur seront conservées)")) {
+    if(confirm("Es-tu sûr de vouloir supprimer TOUT TON historique ?")) {
         const myEmail = auth.currentUser.email;
         db.collection("sessions").get().then((q) => {
             q.forEach((doc) => {
-                const s = doc.data();
-                const owner = s.ownerEmail || ADMIN_EMAIL;
-                if (owner === myEmail) {
-                    doc.ref.delete();
-                }
+                const owner = doc.data().ownerEmail || ADMIN_EMAIL;
+                if (owner === myEmail) doc.ref.delete();
             });
         });
     }
@@ -210,7 +195,6 @@ function updateUI() {
 
     const roomFilterElem = document.getElementById('room-filter');
     const roomFilterValue = roomFilterElem ? roomFilterElem.value : "ALL";
-
     const isGlobalView = (filterValue === "ALL" && roomFilterValue === "ALL");
 
     let defaultStart, defaultGoal;
@@ -245,24 +229,18 @@ function updateUI() {
     if (resetBtn) resetBtn.style.display = isLookingAtOwnStats ? 'block' : 'none';
 
     let filteredSessions = getTargetUserSessions().filter(s => {
-        const sessionStake = s.stake || "NL10";
-        const sessionRoom = s.room || "stake";
-
-        let matchStake = (filterValue === "ALL") || (sessionStake === filterValue);
-        let matchRoom = (roomFilterValue === "ALL") || (sessionRoom === roomFilterValue);
-
+        let matchStake = (filterValue === "ALL") || ((s.stake || "NL10") === filterValue);
+        let matchRoom = (roomFilterValue === "ALL") || ((s.room || "stake") === roomFilterValue);
         return matchStake && matchRoom;
     });
 
     let handsLabels = [0]; let profitsNet = [0];  
     let totalHands = 0; let currentProfitNet = 0; let winningSessions = 0;
-    let totalBB = 0; let totalRakeback = 0;
-    let totalDeposit = 0; let totalWithdrawal = 0;
+    let totalBB = 0; let totalRakeback = 0; let totalDeposit = 0; let totalWithdrawal = 0;
     
     let bestGain = -Infinity, worstGain = Infinity;
     let bestSession = null, worstSession = null;
 
-    const historyBody = document.getElementById('history-list');
     let rows = [];
 
     filteredSessions.forEach((s) => { 
@@ -293,15 +271,11 @@ function updateUI() {
         const sessionStake = s.stake || "NL10";
         const bbValue = (sessionStake === "NL2") ? 0.02 : (sessionStake === "NL5") ? 0.05 : (sessionStake === "NL20") ? 0.20 : 0.10;
         const gainBB = sGain / bbValue;
-        
         if (sHands > 0) totalBB += gainBB;
 
         const currentRoom = s.room || 'stake';
         const roomIcon = currentRoom === 'coinpoker' ? '🪙' : '🎲';
-
-        const rakebackBadge = (isGlobalView && sRakeback > 0 && sHands > 0)
-            ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${sRakeback.toFixed(2)}€ RB</span>`
-            : '';
+        const rakebackBadge = (isGlobalView && sRakeback > 0 && sHands > 0) ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${sRakeback.toFixed(2)}€ RB</span>` : '';
 
         let sessionTime = "";
         if (s.fullDate && s.fullDate.includes('T')) {
@@ -309,66 +283,24 @@ function updateUI() {
         }
 
         if (sDeposit > 0) {
-            rows.push(`<tr>
-                <td style="color: #888; font-weight: 400;">
-                    ${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span> <br>
-                    <small style="font-weight:700; color:#4ade80;">DÉPÔT</small>
-                </td>
-                <td style="color: #888;">—</td>
-                <td style="color: #4ade80; font-weight: 700;">+${sDeposit.toFixed(2)}€</td>
-                <td style="color: #888;">—</td>
-                <td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
-            </tr>`);
+            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#4ade80;">DÉPÔT</small></td><td style="color: #888;">—</td><td style="color: #4ade80; font-weight: 700;">+${sDeposit.toFixed(2)}€</td><td style="color: #888;">—</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
         } else if (sWithdrawal > 0) {
-            rows.push(`<tr>
-                <td style="color: #888; font-weight: 400;">
-                    ${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span> <br>
-                    <small style="font-weight:700; color:#ff5555;">RETRAIT</small>
-                </td>
-                <td style="color: #888;">—</td>
-                <td style="color: #ff5555; font-weight: 700;">-${sWithdrawal.toFixed(2)}€</td>
-                <td style="color: #888;">—</td>
-                <td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
-            </tr>`);
+            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#ff5555;">RETRAIT</small></td><td style="color: #888;">—</td><td style="color: #ff5555; font-weight: 700;">-${sWithdrawal.toFixed(2)}€</td><td style="color: #888;">—</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
         } else if (sRakeback > 0 && sGain === 0 && sHands === 0) {
             if (isGlobalView) {
-                rows.push(`<tr>
-                    <td style="color: #888; font-weight: 400;">
-                        ${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span> <br>
-                        <small style="font-weight:700; color:#a78bfa;">RAKEBACK</small>
-                    </td>
-                    <td style="color: #888;">—</td>
-                    <td style="color: #a78bfa; font-weight: 700;">+${sRakeback.toFixed(2)}€</td>
-                    <td style="color: #888;">—</td>
-                    <td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
-                </tr>`);
+                rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#a78bfa;">RAKEBACK</small></td><td style="color: #888;">—</td><td style="color: #a78bfa; font-weight: 700;">+${sRakeback.toFixed(2)}€</td><td style="color: #888;">—</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
             }
         } else {
-            rows.push(`<tr>
-                <td style="color: #888; font-weight: 400;">
-                    ${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span> <br>
-                    <small style="font-weight:400; color:#3b82f6;">
-                        ${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span>
-                    </small>
-                </td>
-                <td style="font-weight: 400;">${sHands.toLocaleString()}</td>
-                <td style="color: ${sGain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${sGain.toFixed(2)}€${rakebackBadge}</td>
-                <td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">
-                    ${gainBB.toFixed(1)} BB
-                </td>
-                <td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td>
-            </tr>`);
+            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:400; color:#3b82f6;">${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span></small></td><td style="font-weight: 400;">${sHands.toLocaleString()}</td><td style="color: ${sGain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${sGain.toFixed(2)}€${rakebackBadge}</td><td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${gainBB.toFixed(1)} BB</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
         }
     });
 
-    if(historyBody) historyBody.innerHTML = rows.reverse().join('');
+    if(document.getElementById('history-list')) document.getElementById('history-list').innerHTML = rows.reverse().join('');
 
-    // --- CALCUL DU PROFIT NET TOTAL ---
     const profitDepuisStart = currentProfitNet + (isGlobalView ? totalRakeback : 0);
     const profitColor = profitDepuisStart >= 0 ? '#4ade80' : '#ff5555';
     const profitSign = profitDepuisStart > 0 ? '+' : '';
 
-    // --- MISE À JOUR DE LA BARRE AVEC LE PROFIT ---
     const xpTitle = document.getElementById('xp-title-text');
     if(xpTitle) {
         xpTitle.innerHTML = `
@@ -381,600 +313,97 @@ function updateUI() {
         `;
     }
 
-    const bestGainElem = document.getElementById('best-session-gain');
-    const bestDateElem = document.getElementById('best-session-date');
-    const worstGainElem = document.getElementById('worst-session-gain');
-    const worstDateElem = document.getElementById('worst-session-date');
-
     if (filteredSessions.length > 0 && bestSession && worstSession) {
-        if (bestGainElem) bestGainElem.innerText = `+${bestSession.gain.toFixed(2)}€`;
-        if (bestDateElem) bestDateElem.innerText = `le ${bestSession.date} (${bestSession.stake || "NL10"})`;
-        if (worstGainElem) worstGainElem.innerText = `${worstSession.gain.toFixed(2)}€`;
-        if (worstDateElem) worstDateElem.innerText = `le ${worstSession.date} (${worstSession.stake || "NL10"})`;
+        if (document.getElementById('best-session-gain')) document.getElementById('best-session-gain').innerText = `+${bestSession.gain.toFixed(2)}€`;
+        if (document.getElementById('best-session-date')) document.getElementById('best-session-date').innerText = `le ${bestSession.date} (${bestSession.stake || "NL10"})`;
+        if (document.getElementById('worst-session-gain')) document.getElementById('worst-session-gain').innerText = `${worstSession.gain.toFixed(2)}€`;
+        if (document.getElementById('worst-session-date')) document.getElementById('worst-session-date').innerText = `le ${worstSession.date} (${worstSession.stake || "NL10"})`;
     } else {
-        if (bestGainElem) bestGainElem.innerText = "0.00€";
-        if (bestDateElem) bestDateElem.innerText = "--/--";
-        if (worstGainElem) worstGainElem.innerText = "0.00€";
-        if (worstDateElem) worstDateElem.innerText = "--/--";
+        if (document.getElementById('best-session-gain')) document.getElementById('best-session-gain').innerText = "0.00€";
+        if (document.getElementById('best-session-date')) document.getElementById('best-session-date').innerText = "--/--";
+        if (document.getElementById('worst-session-gain')) document.getElementById('worst-session-gain').innerText = "0.00€";
+        if (document.getElementById('worst-session-date')) document.getElementById('worst-session-date').innerText = "--/--";
     }
 
     const brElem = document.getElementById('total-br');
     if(brElem) {
         const newBr = startBR + profitDepuisStart + totalDeposit - totalWithdrawal;
-        if (previousBr === 0) {
-            setTimeout(() => { animateValue('total-br', startBR, newBr, 1500); }, 1200);
-        } else if (Math.abs(previousBr - newBr) > 300) {
-             brElem.innerText = newBr.toFixed(2) + "€";
-        } else {
-             animateValue('total-br', previousBr, newBr, 1000); 
-        }
+        if (previousBr === 0) animateValue('total-br', startBR, newBr, 1500); else animateValue('total-br', previousBr, newBr, 1000); 
         previousBr = newBr; 
     }
 
-    const rakebackElem = document.getElementById('total-rakeback');
-    const rakebackCard = document.getElementById('rakeback-card');
-    if(rakebackElem) {
-        rakebackElem.innerText = "+" + totalRakeback.toFixed(2) + "€";
-        rakebackElem.style.color = totalRakeback > 0 ? '#a78bfa' : '#9ca3af';
+    if(document.getElementById('total-rakeback')) {
+        document.getElementById('total-rakeback').innerText = "+" + totalRakeback.toFixed(2) + "€";
+        document.getElementById('total-rakeback').style.color = totalRakeback > 0 ? '#a78bfa' : '#9ca3af';
     }
-    if(rakebackCard) {
-        rakebackCard.style.display = isGlobalView ? '' : 'none';
-    }
-    
-    document.getElementById('total-volume').innerText = totalHands.toLocaleString();
+    if(document.getElementById('rakeback-card')) document.getElementById('rakeback-card').style.display = isGlobalView ? '' : 'none';
+    if(document.getElementById('total-volume')) document.getElementById('total-volume').innerText = totalHands.toLocaleString();
     
     let winrate = totalHands > 0 ? totalBB / (totalHands / 100) : 0;
-    const winrateElem = document.getElementById('winrate');
-    winrateElem.innerText = (winrate >= 0 ? '+' : '') + winrate.toFixed(2) + " bb/100";
-    winrateElem.style.color = winrate >= 0 ? '#4ade80' : '#ff5555';
-    
-    let successRate = filteredSessions.length > 0 ? (winningSessions / filteredSessions.length) * 100 : 0;
-    document.getElementById('success-rate').innerText = successRate.toFixed(1) + "%";
+    if(document.getElementById('winrate')) {
+        document.getElementById('winrate').innerText = (winrate >= 0 ? '+' : '') + winrate.toFixed(2) + " bb/100";
+        document.getElementById('winrate').style.color = winrate >= 0 ? '#4ade80' : '#ff5555';
+    }
+    if(document.getElementById('success-rate')) document.getElementById('success-rate').innerText = (filteredSessions.length > 0 ? (winningSessions / filteredSessions.length) * 100 : 0).toFixed(1) + "%";
     
     let prog = (profitDepuisStart / (goalBR - startBR)) * 100;
-    let displayProg = Math.min(100, Math.max(0, prog)); 
-    document.getElementById('br-progression-text').innerText = displayProg.toFixed(1) + "%";
-    document.getElementById('progress-bar-fill').style.width = displayProg + "%";
+    if(document.getElementById('br-progression-text')) document.getElementById('br-progression-text').innerText = Math.min(100, Math.max(0, prog)).toFixed(1) + "%";
+    if(document.getElementById('progress-bar-fill')) document.getElementById('progress-bar-fill').style.width = Math.min(100, Math.max(0, prog)) + "%";
 
     renderCalendar(filteredSessions);
     renderChart(handsLabels, profitsNet, filterValue);
 }
 
-// --- 6. CHART ET AUDIO (AVEC SABRE LASER CAMÉLÉON) ---
-const neonLinePlugin = {
-    id: 'neonLine',
-    defaults: { 
-        neonColor: '#3b82f6', 
-        coreColor: '#eff6ff', 
-        ballColor: '#ffffff',
-        speed: 2500
-    },
-    
-    afterDatasetsDraw(chart, args, options) {
-        const { ctx, scales: { x, y } } = chart;
-        const datasetMeta = chart.getDatasetMeta(0);
-        const points = datasetMeta.data;
+// --- 🛑 LA MODALE SESSION DÉTAIL 🛑 ---
+window.openSessionDetail = function(dateStr) {
+    const userSessions = getTargetUserSessions().filter(s => s.fullDate && s.fullDate.startsWith(dateStr));
+    if (userSessions.length === 0) return;
 
-        if (!points || points.length < 2 || chart.neonProgress === undefined) return;
-
-        ctx.save();
-
-        const totalDuration = options.speed;
-        const elapsed = Date.now() - chart.neonStartTime;
-        const progress = Math.min(elapsed / totalDuration, 1);
-        
-        const endIndex = (points.length - 1) * progress;
-        const integerEndIndex = Math.floor(endIndex);
-        const factionalEndIndex = endIndex - integerEndIndex;
-
-        ctx.beginPath();
-        for (let i = 0; i <= integerEndIndex; i++) {
-            const point = points[i];
-            if (i === 0) ctx.moveTo(point.x, point.y);
-            else ctx.lineTo(point.x, point.y);
-        }
-        
-        if (integerEndIndex < points.length - 1) {
-            const p1 = points[integerEndIndex];
-            const p2 = points[integerEndIndex + 1];
-            const finalX = p1.x + (p2.x - p1.x) * factionalEndIndex;
-            const finalY = p1.y + (p2.y - p1.y) * factionalEndIndex;
-            ctx.lineTo(finalX, finalY);
-        }
-
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        ctx.lineWidth = 20;
-        ctx.strokeStyle = options.neonColor.replace(')', ', 0.08)').replace('rgb', 'rgba'); 
-        ctx.shadowColor = options.neonColor;
-        ctx.shadowBlur = 40;
-        ctx.stroke();
-
-        ctx.lineWidth = 10;
-        ctx.strokeStyle = options.neonColor.replace(')', ', 0.2)').replace('rgb', 'rgba'); 
-        ctx.shadowBlur = 20; 
-        ctx.stroke();
-
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = options.coreColor.replace(')', ', 0.4)').replace('rgb', 'rgba'); 
-        ctx.shadowBlur = 10; 
-        ctx.stroke();
-
-        ctx.lineWidth = 1.0;
-        ctx.strokeStyle = options.coreColor;
-        ctx.shadowBlur = 3;
-        ctx.stroke();
-
-        if (points.length > 0) {
-            let ballX, ballY;
-            if (integerEndIndex < points.length - 1) {
-                const p1 = points[integerEndIndex];
-                const p2 = points[integerEndIndex + 1];
-                ballX = p1.x + (p2.x - p1.x) * factionalEndIndex;
-                ballY = p1.y + (p2.y - p1.y) * factionalEndIndex;
-            } else {
-                const last = points[points.length - 1];
-                ballX = last.x;
-                ballY = last.y;
-            }
-
-            ctx.beginPath();
-            ctx.arc(ballX, ballY, 18, 0, Math.PI * 2);
-            ctx.fillStyle = options.neonColor.replace(')', ', 0.1)').replace('rgb', 'rgba');
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(ballX, ballY, 10, 0, Math.PI * 2);
-            ctx.fillStyle = options.coreColor.replace(')', ', 0.3)').replace('rgb', 'rgba'); 
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(ballX, ballY, 6.5, 0, Math.PI * 2);
-            ctx.fillStyle = options.ballColor;
-            ctx.shadowColor = options.coreColor;
-            ctx.shadowBlur = 25;
-            ctx.fill();
-        }
-
-        ctx.restore();
-
-        if (progress < 1) {
-            requestAnimationFrame(() => chart.draw()); 
-        }
-    }
-};
-
-function renderChart(labels, values, filterValue = "ALL") {
-    const canvas = document.getElementById('myChart');
-    if(!canvas) return;
-    const ctx = canvas.getContext('2d');
-    
-    if (window.pokerChart) window.pokerChart.destroy();
-
-    let themeColor, coreColor, bgColor, gridColor;
-    switch(filterValue) {
-        case "NL20":
-            themeColor = 'rgb(236, 72, 153)'; 
-            coreColor = 'rgb(253, 242, 248)';
-            bgColor = 'rgba(236, 72, 153, 0.05)';
-            gridColor = 'rgba(236, 72, 153, 0.1)';
-            break;
-        case "NL10":
-            themeColor = 'rgb(168, 85, 247)'; 
-            coreColor = 'rgb(250, 245, 255)';
-            bgColor = 'rgba(168, 85, 247, 0.05)';
-            gridColor = 'rgba(168, 85, 247, 0.1)';
-            break;
-        case "NL5":
-            themeColor = 'rgb(245, 158, 11)'; 
-            coreColor = 'rgb(255, 251, 235)';
-            bgColor = 'rgba(245, 158, 11, 0.05)';
-            gridColor = 'rgba(245, 158, 11, 0.1)';
-            break;
-        case "NL2":
-            themeColor = 'rgb(34, 197, 94)';  
-            coreColor = 'rgb(240, 253, 244)';
-            bgColor = 'rgba(34, 197, 94, 0.05)';
-            gridColor = 'rgba(34, 197, 94, 0.1)';
-            break;
-        default: 
-            themeColor = 'rgb(59, 130, 246)'; 
-            coreColor = 'rgb(239, 246, 255)';
-            bgColor = 'rgba(59, 130, 246, 0.05)';
-            gridColor = 'rgba(59, 130, 246, 0.1)';
-            break;
-    }
-    
-    const chartConfig = {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Profit Net',
-                data: values,
-                pointRadius: 0,
-                pointHoverRadius: 5,
-                borderWidth: 0,
-                borderColor: 'rgba(0,0,0,0)',
-                fill: 'start',
-                backgroundColor: bgColor, 
-                tension: 0.2
-            }]
-        },
-        options: {
-            responsive: true, 
-            maintainAspectRatio: false,
-            layout: {
-                padding: { left: 0, right: 0, top: 10, bottom: 5 }
-            },
-            scales: {
-                y: { 
-                    suggestedMin: 0, 
-                    grid: { color: gridColor }, 
-                    ticks: { color: '#9ca3af' } 
-                },
-                x: { 
-                    type: 'linear', 
-                    bounds: 'tight', 
-                    grid: { display: false }, 
-                    min: labels[0], 
-                    max: labels[labels.length - 1], 
-                    ticks: { color: '#9ca3af' } 
-                }
-            },
-            plugins: { 
-                legend: { display: false },
-                neonLine: {
-                    neonColor: themeColor, 
-                    coreColor: coreColor,  
-                    ballColor: '#ffffff', 
-                    speed: 2000 
-                },
-                zoom: {
-                    limits: {
-                        x: { min: 'original', max: 'original' }
-                    },
-                    pan: {
-                        enabled: true,
-                        mode: 'x'
-                    },
-                    zoom: {
-                        wheel: { enabled: true },
-                        pinch: { enabled: true },
-                        mode: 'x'
-                    }
-                }
-            }
-        },
-        plugins: [neonLinePlugin]
-    };
-
-    window.pokerChart = new Chart(ctx, chartConfig);
-    
-    if (labels.length > 1) {
-        window.pokerChart.neonProgress = 0;
-        window.pokerChart.neonStartTime = Date.now();
-        window.pokerChart.draw();
-    }
-}
-
-function animateValue(id, start, end, duration) {
-    const obj = document.getElementById(id);
-    if (!obj) return;
-    let startTimestamp = null;
-    const step = (timestamp) => {
-        if (!startTimestamp) startTimestamp = timestamp;
-        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        obj.innerText = (progress * (end - start) + start).toFixed(2) + "€";
-        if (progress < 1) window.requestAnimationFrame(step);
-    };
-    window.requestAnimationFrame(step);
-}
-
-// --- 7. ANIMATIONS DE FOND ET NUKES ---
-const bgCanvas = document.getElementById('bg-canvas');
-if (bgCanvas) {
-    const bgCtx = bgCanvas.getContext('2d');
-    let stars = [], smokeTrail = [], shootingStars = [], shootingStarTimer = 0, fireballs = [], fireballTimer = 0, mouse = { x: null, y: null };
-    
-    let nukeFlash = 0;
-    let nukeParticles = [];
-
-    window.triggerNuke = function() {
-        if(typeof playPop === "function") playPop();
-        nukeFlash = 1.2; 
-        const cx = bgCanvas.width / 2;
-        const cy = bgCanvas.height * 0.4; 
-
-        for(let i = 0; i < 400; i++) { 
-            const angle = (Math.random() > 0.5 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.3; 
-            const speed = Math.random() * 45 + 15; 
-            nukeParticles.push({
-                x: cx,
-                y: bgCanvas.height,
-                vx: Math.cos(angle) * speed,
-                vy: -(Math.random() * 4 + 1), 
-                life: 1.0,
-                decay: Math.random() * 0.015 + 0.005, 
-                size: Math.random() * 50 + 20, 
-                color: Math.random() > 0.6 ? '255, 220, 100' : (Math.random() > 0.4 ? '255, 80, 0' : '100, 100, 100')
-            });
-        }
-
-        for(let i = 0; i < 300; i++) { 
-            nukeParticles.push({
-                x: cx + (Math.random() - 0.5) * 150, 
-                y: bgCanvas.height,
-                vx: (Math.random() - 0.5) * 8, 
-                vy: -(Math.random() * 25 + 10), 
-                life: 1.0,
-                decay: Math.random() * 0.012 + 0.006,
-                size: Math.random() * 45 + 15,
-                color: Math.random() > 0.5 ? '255, 100, 0' : '80, 80, 80'
-            });
-        }
-
-        for(let i = 0; i < 500; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const radius = Math.random() * 40;
-            const speed = Math.random() * 18 + 2;
-            nukeParticles.push({
-                x: cx + Math.cos(angle) * radius,
-                y: cy + Math.sin(angle) * radius,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed * 0.5 - (Math.random() * 5), 
-                life: 1.0,
-                decay: Math.random() * 0.008 + 0.003,
-                size: Math.random() * 50 + 15,
-                color: Math.random() > 0.6 ? '255, 80, 0' : (Math.random() > 0.5 ? '255, 200, 50' : '60, 60, 60')
-            });
-        }
-    };
-
-    function initBg() {
-        bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight;
-        stars = [];
-        for (let i = 0; i < 50; i++) {
-            stars.push({ x: Math.random() * bgCanvas.width, y: Math.random() * bgCanvas.height, sx: (Math.random() - 0.5) * 0.5, sy: (Math.random() - 0.5) * 0.5 });
-        }
-    }
-
-    window.addEventListener('mousemove', (e) => {
-        mouse.x = e.clientX; mouse.y = e.clientY;
-        for(let i = 0; i < 2; i++) {
-            smokeTrail.push({ x: mouse.x, y: mouse.y, size: Math.random() * 5 + 2, speedX: (Math.random() - 0.5) * 0.8, speedY: (Math.random() - 1) * 0.4, opacity: 1 });
-        }
+    let profit = 0, hands = 0, rb = 0, totalBB = 0, stakes = new Set(), room = "";
+    userSessions.forEach(s => {
+        profit += (parseFloat(s.gain) || 0);
+        hands += (parseInt(s.hands) || 0);
+        rb += (parseFloat(s.rakeback) || 0);
+        if (s.room) room = s.room;
+        const bbVal = (s.stake === "NL2") ? 0.02 : (s.stake === "NL5") ? 0.05 : (s.stake === "NL20") ? 0.20 : 0.10;
+        if (s.hands > 0) totalBB += (parseFloat(s.gain) || 0) / bbVal;
+        if (s.stake) stakes.add(s.stake);
     });
 
-    function createShootingStar() {
-        shootingStars.push({
-            x: Math.random() * bgCanvas.width, 
-            y: -10, 
-            vx: (Math.random() - 0.5) * 4, 
-            vy: Math.random() * 5 + 7,
-            trail: [] 
-        });
-    }
-
-    function createFireball() {
-        fireballs.push({
-            x: Math.random() * bgCanvas.width, 
-            y: -30, 
-            vx: (Math.random() - 0.5) * 2, 
-            vy: Math.random() * 2 + 3, 
-            size: Math.random() * 4 + 3, 
-            trail: [] 
-        });
-    }
-
-    function animateBg() {
-        bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-        
-        bgCtx.fillStyle = "rgba(59, 130, 246, 0.2)";
-        stars.forEach(p => {
-            p.x += p.sx; p.y += p.sy;
-            if(p.x < 0 || p.x > bgCanvas.width) p.sx *= -1; if(p.y < 0 || p.y > bgCanvas.height) p.sy *= -1;
-            bgCtx.beginPath(); bgCtx.arc(p.x, p.y, 2, 0, Math.PI * 2); bgCtx.fill();
-        });
-
-        for (let i = 0; i < smokeTrail.length; i++) {
-            let s = smokeTrail[i]; s.x += s.speedX; s.y += s.speedY; s.size += 0.6; s.opacity -= 0.012;
-            if (s.opacity <= 0) { smokeTrail.splice(i, 1); i--; } 
-            else {
-                const gradient = bgCtx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size);
-                gradient.addColorStop(0, `rgba(59, 130, 246, ${s.opacity * 0.15})`);
-                gradient.addColorStop(0.7, `rgba(59, 130, 246, ${s.opacity * 0.05})`);
-                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                bgCtx.beginPath(); bgCtx.fillStyle = gradient; bgCtx.arc(s.x, s.y, s.size, 0, Math.PI * 2); bgCtx.fill();
-            }
-        }
-
-        shootingStarTimer++;
-        if (shootingStarTimer > 800) { 
-            createShootingStar();
-            shootingStarTimer = 0;
-        }
-
-        shootingStars.forEach((s, idx) => {
-            s.x += s.vx; s.y += s.vy;
-            s.trail.push({x: s.x, y: s.y});
-            if(s.trail.length > 15) s.trail.shift();
-
-            bgCtx.beginPath();
-            bgCtx.strokeStyle = "rgba(147, 197, 253, 0.4)";
-            bgCtx.lineWidth = 1;
-            s.trail.forEach(t => bgCtx.lineTo(t.x, t.y));
-            bgCtx.stroke();
-
-            if(s.y > bgCanvas.height) shootingStars.splice(idx, 1);
-        });
-
-        fireballTimer++;
-        if (fireballTimer > Math.random() * 1000 + 500) { 
-            createFireball();
-            fireballTimer = 0;
-        }
-
-        fireballs.forEach((fb, idx) => {
-            fb.x += fb.vx; fb.y += fb.vy;
-            fb.trail.push({x: fb.x, y: fb.y, size: fb.size});
-            if(fb.trail.length > 25) fb.trail.shift();
-
-            if(fb.trail.length > 1) {
-                bgCtx.beginPath();
-                let fireGrad = bgCtx.createLinearGradient(fb.trail[0].x, fb.trail[0].y, fb.x, fb.y);
-                fireGrad.addColorStop(0, "rgba(255, 50, 0, 0)");
-                fireGrad.addColorStop(1, "rgba(255, 140, 0, 0.6)");
-                bgCtx.strokeStyle = fireGrad;
-                bgCtx.lineWidth = fb.size; 
-                bgCtx.lineCap = 'round';
-                fb.trail.forEach(t => bgCtx.lineTo(t.x, t.y));
-                bgCtx.stroke();
-            }
-
-            bgCtx.beginPath();
-            bgCtx.arc(fb.x, fb.y, fb.size, 0, Math.PI * 2);
-            bgCtx.fillStyle = "#ffddaa"; 
-            bgCtx.shadowColor = "#ff4500"; 
-            bgCtx.shadowBlur = 25; 
-            bgCtx.fill();
-            bgCtx.shadowBlur = 0;
-
-            if(fb.y > bgCanvas.height + 50) fireballs.splice(idx, 1);
-        });
-
-        if (nukeFlash > 0) {
-            bgCtx.fillStyle = `rgba(255, 255, 240, ${Math.min(nukeFlash, 1)})`; 
-            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-            nukeFlash -= 0.02; 
-        }
-
-        for (let i = 0; i < nukeParticles.length; i++) {
-            let p = nukeParticles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.life -= p.decay;
-            p.vx *= 0.94; 
-            p.vy *= 0.94;
-            
-            if (p.life <= 0) {
-                nukeParticles.splice(i, 1);
-                i--;
-            } else {
-                bgCtx.beginPath();
-                let currentRadius = Math.max(0.1, p.size * p.life);
-                bgCtx.arc(p.x, p.y, currentRadius, 0, Math.PI * 2);
-                
-                const gradient = bgCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, currentRadius);
-                gradient.addColorStop(0, `rgba(${p.color}, ${p.life})`);
-                gradient.addColorStop(1, `rgba(${p.color}, 0)`);
-                
-                bgCtx.fillStyle = gradient;
-                bgCtx.fill();
-            }
-        }
-
-        requestAnimationFrame(animateBg);
-    }
-
-    window.addEventListener('resize', initBg);
-    initBg(); 
-    animateBg();
-}
-
-// --- 8. EXPORT ET IMPORT DES DONNÉES ---
-function exportData() {
-    if (!auth.currentUser || auth.currentUser.email !== ADMIN_EMAIL) {
-        return alert("Seul l'admin peut exporter les données.");
-    }
-    const dataStr = JSON.stringify(allSessionsDB, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const downloadNode = document.createElement('a');
-    downloadNode.href = url;
-    downloadNode.download = "backup_poker_stats.json";
-    downloadNode.style.display = 'none';
-    document.body.appendChild(downloadNode);
-    downloadNode.click();
-    document.body.removeChild(downloadNode);
-    URL.revokeObjectURL(url);
-}
-
-function importData() {
-    if (!auth.currentUser || auth.currentUser.email !== ADMIN_EMAIL) {
-        return alert("Seul l'admin peut importer des données.");
-    }
-
-    alert("🚀 Le nouveau script TERMINATOR est bien activé !");
-
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json'; 
-    input.style.display = 'none';
-    document.body.appendChild(input); 
+    const winrate = hands > 0 ? totalBB / (hands / 100) : 0;
+    const isWin = profit >= 0;
+    const mainSession = userSessions[0];
     
-    input.onchange = e => {
-        const file = e.target.files[0];
-        if (!file) return; 
+    const parts = dateStr.split('-');
+    const displayDate = parts[2] + '/' + parts[1] + '/' + parts[0];
+    
+    let displayTime = "00h00";
+    if (mainSession.fullDate && mainSession.fullDate.includes('T')) {
+        displayTime = mainSession.fullDate.split('T')[1].substring(0, 5).replace(':', 'h');
+    }
+    const roomText = room === 'coinpoker' ? '🪙 CoinPoker' : '🎲 Stake';
 
-        const reader = new FileReader();
-        reader.readAsText(file, 'UTF-8');
-        
-        reader.onload = readerEvent => {
-            try {
-                const data = JSON.parse(readerEvent.target.result);
-                let count = 0;
-                data.forEach(s => {
-                    let rawGain = String(s.gain).replace(',', '.');
-                    let gainNumber = parseFloat(rawGain);
-
-                    let sString = JSON.stringify(s);
-                    let match = sString.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-                    
-                    let displayDate = "00/00";
-                    let isoDate = "2000-01-01T0000";
-
-                    if (match) {
-                        let jour = match[1], mois = match[2], annee = match[3];
-                        displayDate = `${jour}/${mois}`; 
-                        isoDate = `${annee}-${mois}-${jour}T${String(count).padStart(4, '0')}`;
-                    }
-
-                    db.collection("sessions").add({
-                        date: displayDate,
-                        fullDate: isoDate,
-                        hands: parseInt(s.hands) || 0,
-                        gain: gainNumber,
-                        stake: "NL2",
-                        ownerEmail: ADMIN_EMAIL 
-                    });
-                    count++;
-                });
-                alert("✅ VICTOIRE ! " + count + " sessions importées avec la bonne date !");
-            } catch (err) {
-                alert("❌ Erreur. Le fichier n'est pas un JSON valide.");
-                console.error(err);
-            }
-        }
-    };
-    input.click(); 
-    setTimeout(() => document.body.removeChild(input), 100); 
-}
-
-let audioCtx;
-function playPop() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    osc.connect(gainNode); gainNode.connect(audioCtx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
-    gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.05);
-}
+    const modal = document.getElementById('session-modal-shell');
+    if (modal) {
+        modal.innerHTML = `
+            <div class="session-card ${isWin ? 'win-card' : 'loss-card'}">
+                <button class="close-session-btn" onclick="document.getElementById('session-modal-shell').classList.remove('show'); setTimeout(() => document.getElementById('session-modal-shell').style.display='none', 300);">✕</button>
+                <div class="session-header">🗓️ ${displayDate} - ${displayTime}</div>
+                <div class="session-profit-title">PROFIT DU JOUR</div>
+                <div class="session-profit-value">${profit > 0 ? '+' : ''}${profit.toFixed(2)}€</div>
+                <div class="session-stats-grid">
+                    <div class="session-stat-box"><span class="stat-label">WINRATE</span><span class="stat-val ${isWin ? 'win-text' : 'loss-text'}">${winrate.toFixed(2)} bb/100</span></div>
+                    <div class="session-stat-box"><span class="stat-label">VOLUME</span><span class="stat-val">${hands} Mains</span></div>
+                    <div class="session-stat-box"><span class="stat-label">TERRAIN</span><span class="stat-val" style="font-size:0.85rem">${roomText} <br><span style="color:#60a5fa">${Array.from(stakes).join(' / ')}</span></span></div>
+                    <div class="session-stat-box"><span class="stat-label">RAKEBACK</span><span class="stat-val rb-text">+${rb.toFixed(2)}€</span></div>
+                </div>
+                ${(auth.currentUser && auth.currentUser.email === (mainSession.ownerEmail || ADMIN_EMAIL)) ? 
+                    `<button class="delete-session-btn" onclick="deleteSession('${mainSession.id}')"><span style="font-size: 1.1rem;">🗑️</span> Supprimer cette session</button>` : ''}
+            </div>`;
+        modal.style.display = 'flex';
+        setTimeout(() => { modal.classList.add('show'); }, 10);
+    }
+};
 
 // --- 9. CALENDRIER PNL ---
 let currentCalDate = new Date(); 
@@ -1110,117 +539,268 @@ function renderCalendar(filteredSessions) {
             content += `<span style="position: absolute; top: 3px; right: 4px; font-size: 0.55rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase;">${stakesStr}</span>`;
             content += `<p class="cal-pnl">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</p>`;
             content += `<span style="position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font-size: 0.6rem; color: #888; font-weight: 600;">${data.hands} h</span>`;
-        }
 
-        html += `<div class="${classes}">${content}</div>`;
+            html += `<div class="${classes}" onclick="openSessionDetail('${dateStr}')" style="cursor: pointer;">${content}</div>`;
+        } else {
+            html += `<div class="${classes}">${content}</div>`;
+        }
     }
     html += `</div>`;
 
     calContainer.innerHTML = html;
 }
 
-// --- 10. HORLOGE TEMPS RÉEL ---
-// L'appel récurrent a été supprimé pour ne pas écraser tes saisies
-setTodayDate();
+// --- 10. CHART ET AUDIO ---
+const neonLinePlugin = {
+    id: 'neonLine',
+    defaults: { neonColor: '#3b82f6', coreColor: '#eff6ff', ballColor: '#ffffff', speed: 2500 },
+    afterDatasetsDraw(chart, args, options) {
+        const { ctx, scales: { x, y } } = chart;
+        const datasetMeta = chart.getDatasetMeta(0);
+        const points = datasetMeta.data;
+        if (!points || points.length < 2 || chart.neonProgress === undefined) return;
+        ctx.save();
+        const totalDuration = options.speed;
+        const elapsed = Date.now() - chart.neonStartTime;
+        const progress = Math.min(elapsed / totalDuration, 1);
+        const endIndex = (points.length - 1) * progress;
+        const integerEndIndex = Math.floor(endIndex);
+        const factionalEndIndex = endIndex - integerEndIndex;
 
-document.addEventListener('DOMContentLoaded', () => {
-    const bankrollCard = document.querySelector('.stat-card');
-    if (bankrollCard) {
-        bankrollCard.style.cursor = 'pointer'; 
-        bankrollCard.addEventListener('click', () => {
-            bankrollCard.classList.add('spinning');
-            if (typeof playPop === "function") playPop();
-            setTimeout(() => { bankrollCard.classList.remove('spinning'); }, 600);
-        });
+        ctx.beginPath();
+        for (let i = 0; i <= integerEndIndex; i++) {
+            const point = points[i];
+            if (i === 0) ctx.moveTo(point.x, point.y);
+            else ctx.lineTo(point.x, point.y);
+        }
+        if (integerEndIndex < points.length - 1) {
+            const p1 = points[integerEndIndex];
+            const p2 = points[integerEndIndex + 1];
+            const finalX = p1.x + (p2.x - p1.x) * factionalEndIndex;
+            const finalY = p1.y + (p2.y - p1.y) * factionalEndIndex;
+            ctx.lineTo(finalX, finalY);
+        }
+
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.lineWidth = 20; ctx.strokeStyle = options.neonColor.replace(')', ', 0.08)').replace('rgb', 'rgba'); ctx.shadowColor = options.neonColor; ctx.shadowBlur = 40; ctx.stroke();
+        ctx.lineWidth = 10; ctx.strokeStyle = options.neonColor.replace(')', ', 0.2)').replace('rgb', 'rgba'); ctx.shadowBlur = 20; ctx.stroke();
+        ctx.lineWidth = 5; ctx.strokeStyle = options.coreColor.replace(')', ', 0.4)').replace('rgb', 'rgba'); ctx.shadowBlur = 10; ctx.stroke();
+        ctx.lineWidth = 1.0; ctx.strokeStyle = options.coreColor; ctx.shadowBlur = 3; ctx.stroke();
+
+        if (points.length > 0) {
+            let ballX, ballY;
+            if (integerEndIndex < points.length - 1) {
+                const p1 = points[integerEndIndex]; const p2 = points[integerEndIndex + 1];
+                ballX = p1.x + (p2.x - p1.x) * factionalEndIndex; ballY = p1.y + (p2.y - p1.y) * factionalEndIndex;
+            } else { const last = points[points.length - 1]; ballX = last.x; ballY = last.y; }
+            ctx.beginPath(); ctx.arc(ballX, ballY, 18, 0, Math.PI * 2); ctx.fillStyle = options.neonColor.replace(')', ', 0.1)').replace('rgb', 'rgba'); ctx.fill();
+            ctx.beginPath(); ctx.arc(ballX, ballY, 10, 0, Math.PI * 2); ctx.fillStyle = options.coreColor.replace(')', ', 0.3)').replace('rgb', 'rgba'); ctx.fill();
+            ctx.beginPath(); ctx.arc(ballX, ballY, 6.5, 0, Math.PI * 2); ctx.fillStyle = options.ballColor; ctx.shadowColor = options.coreColor; ctx.shadowBlur = 25; ctx.fill();
+        }
+        ctx.restore();
+        if (progress < 1) requestAnimationFrame(() => chart.draw()); 
     }
-});
+};
 
-// --- 11. MODALE RANGES ET NAVIGATION ---
-window.currentRangePage = 0;
-window.rangeTitles = ["🟢 Open Raise", "🚀 3bet & Défense", "🔥 Iso & Squeeze", "🧮 Équité & Maths"]; 
+function renderChart(labels, values, filterValue = "ALL") {
+    const canvas = document.getElementById('myChart');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (window.pokerChart) window.pokerChart.destroy();
+    let themeColor, coreColor, bgColor, gridColor;
+    switch(filterValue) {
+        case "NL20": themeColor = 'rgb(236, 72, 153)'; coreColor = 'rgb(253, 242, 248)'; bgColor = 'rgba(236, 72, 153, 0.05)'; gridColor = 'rgba(236, 72, 153, 0.1)'; break;
+        case "NL10": themeColor = 'rgb(168, 85, 247)'; coreColor = 'rgb(250, 245, 255)'; bgColor = 'rgba(168, 85, 247, 0.05)'; gridColor = 'rgba(168, 85, 247, 0.1)'; break;
+        case "NL5": themeColor = 'rgb(245, 158, 11)'; coreColor = 'rgb(255, 251, 235)'; bgColor = 'rgba(245, 158, 11, 0.05)'; gridColor = 'rgba(245, 158, 11, 0.1)'; break;
+        case "NL2": themeColor = 'rgb(34, 197, 94)'; coreColor = 'rgb(240, 253, 244)'; bgColor = 'rgba(34, 197, 94, 0.05)'; gridColor = 'rgba(34, 197, 94, 0.1)'; break;
+        default: themeColor = 'rgb(59, 130, 246)'; coreColor = 'rgb(239, 246, 255)'; bgColor = 'rgba(59, 130, 246, 0.05)'; gridColor = 'rgba(59, 130, 246, 0.1)'; break;
+    }
+    const chartConfig = {
+        type: 'line',
+        data: { labels: labels, datasets: [{ label: 'Profit Net', data: values, pointRadius: 0, pointHoverRadius: 5, borderWidth: 0, borderColor: 'rgba(0,0,0,0)', fill: 'start', backgroundColor: bgColor, tension: 0.2 }] },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { left: 0, right: 0, top: 10, bottom: 5 } }, scales: { y: { suggestedMin: 0, grid: { color: gridColor }, ticks: { color: '#9ca3af' } }, x: { type: 'linear', bounds: 'tight', grid: { display: false }, min: labels[0], max: labels[labels.length - 1], ticks: { color: '#9ca3af' } } }, plugins: { legend: { display: false }, neonLine: { neonColor: themeColor, coreColor: coreColor, ballColor: '#ffffff', speed: 2000 }, zoom: { limits: { x: { min: 'original', max: 'original' } }, pan: { enabled: true, mode: 'x' }, zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' } } } },
+        plugins: [neonLinePlugin]
+    };
+    window.pokerChart = new Chart(ctx, chartConfig);
+    if (labels.length > 1) { window.pokerChart.neonProgress = 0; window.pokerChart.neonStartTime = Date.now(); window.pokerChart.draw(); }
+}
+
+function animateValue(id, start, end, duration) {
+    const obj = document.getElementById(id);
+    if (!obj) return;
+    let startTimestamp = null;
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        obj.innerText = (progress * (end - start) + start).toFixed(2) + "€";
+        if (progress < 1) window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
+}
+
+const bgCanvas = document.getElementById('bg-canvas');
+if (bgCanvas) {
+    const bgCtx = bgCanvas.getContext('2d');
+    let stars = [], smokeTrail = [], shootingStars = [], shootingStarTimer = 0, fireballs = [], fireballTimer = 0, mouse = { x: null, y: null };
+    let nukeFlash = 0, nukeParticles = [];
+
+    window.triggerNuke = function() {
+        if(typeof playPop === "function") playPop();
+        nukeFlash = 1.2; 
+        const cx = bgCanvas.width / 2; const cy = bgCanvas.height * 0.4; 
+        for(let i = 0; i < 400; i++) { 
+            const angle = (Math.random() > 0.5 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.3; const speed = Math.random() * 45 + 15; 
+            nukeParticles.push({ x: cx, y: bgCanvas.height, vx: Math.cos(angle) * speed, vy: -(Math.random() * 4 + 1), life: 1.0, decay: Math.random() * 0.015 + 0.005, size: Math.random() * 50 + 20, color: Math.random() > 0.6 ? '255, 220, 100' : (Math.random() > 0.4 ? '255, 80, 0' : '100, 100, 100') });
+        }
+        for(let i = 0; i < 300; i++) { 
+            nukeParticles.push({ x: cx + (Math.random() - 0.5) * 150, y: bgCanvas.height, vx: (Math.random() - 0.5) * 8, vy: -(Math.random() * 25 + 10), life: 1.0, decay: Math.random() * 0.012 + 0.006, size: Math.random() * 45 + 15, color: Math.random() > 0.5 ? '255, 100, 0' : '80, 80, 80' });
+        }
+        for(let i = 0; i < 500; i++) {
+            const angle = Math.random() * Math.PI * 2; const radius = Math.random() * 40; const speed = Math.random() * 18 + 2;
+            nukeParticles.push({ x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed * 0.5 - (Math.random() * 5), life: 1.0, decay: Math.random() * 0.008 + 0.003, size: Math.random() * 50 + 15, color: Math.random() > 0.6 ? '255, 80, 0' : (Math.random() > 0.5 ? '255, 200, 50' : '60, 60, 60') });
+        }
+    };
+
+    function initBg() {
+        bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight;
+        stars = [];
+        for (let i = 0; i < 50; i++) stars.push({ x: Math.random() * bgCanvas.width, y: Math.random() * bgCanvas.height, sx: (Math.random() - 0.5) * 0.5, sy: (Math.random() - 0.5) * 0.5 });
+    }
+
+    window.addEventListener('mousemove', (e) => {
+        mouse.x = e.clientX; mouse.y = e.clientY;
+        for(let i = 0; i < 2; i++) smokeTrail.push({ x: mouse.x, y: mouse.y, size: Math.random() * 5 + 2, speedX: (Math.random() - 0.5) * 0.8, speedY: (Math.random() - 1) * 0.4, opacity: 1 });
+    });
+
+    function createShootingStar() { shootingStars.push({ x: Math.random() * bgCanvas.width, y: -10, vx: (Math.random() - 0.5) * 4, vy: Math.random() * 5 + 7, trail: [] }); }
+    function createFireball() { fireballs.push({ x: Math.random() * bgCanvas.width, y: -30, vx: (Math.random() - 0.5) * 2, vy: Math.random() * 2 + 3, size: Math.random() * 4 + 3, trail: [] }); }
+
+    function animateBg() {
+        bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+        bgCtx.fillStyle = "rgba(59, 130, 246, 0.2)";
+        stars.forEach(p => {
+            p.x += p.sx; p.y += p.sy;
+            if(p.x < 0 || p.x > bgCanvas.width) p.sx *= -1; if(p.y < 0 || p.y > bgCanvas.height) p.sy *= -1;
+            bgCtx.beginPath(); bgCtx.arc(p.x, p.y, 2, 0, Math.PI * 2); bgCtx.fill();
+        });
+
+        for (let i = 0; i < smokeTrail.length; i++) {
+            let s = smokeTrail[i]; s.x += s.speedX; s.y += s.speedY; s.size += 0.6; s.opacity -= 0.012;
+            if (s.opacity <= 0) { smokeTrail.splice(i, 1); i--; } 
+            else {
+                const gradient = bgCtx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size);
+                gradient.addColorStop(0, `rgba(59, 130, 246, ${s.opacity * 0.15})`); gradient.addColorStop(0.7, `rgba(59, 130, 246, ${s.opacity * 0.05})`); gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                bgCtx.beginPath(); bgCtx.fillStyle = gradient; bgCtx.arc(s.x, s.y, s.size, 0, Math.PI * 2); bgCtx.fill();
+            }
+        }
+
+        shootingStarTimer++; if (shootingStarTimer > 800) { createShootingStar(); shootingStarTimer = 0; }
+        shootingStars.forEach((s, idx) => {
+            s.x += s.vx; s.y += s.vy; s.trail.push({x: s.x, y: s.y}); if(s.trail.length > 15) s.trail.shift();
+            bgCtx.beginPath(); bgCtx.strokeStyle = "rgba(147, 197, 253, 0.4)"; bgCtx.lineWidth = 1;
+            s.trail.forEach(t => bgCtx.lineTo(t.x, t.y)); bgCtx.stroke();
+            if(s.y > bgCanvas.height) shootingStars.splice(idx, 1);
+        });
+
+        fireballTimer++; if (fireballTimer > Math.random() * 1000 + 500) { createFireball(); fireballTimer = 0; }
+        fireballs.forEach((fb, idx) => {
+            fb.x += fb.vx; fb.y += fb.vy; fb.trail.push({x: fb.x, y: fb.y, size: fb.size}); if(fb.trail.length > 25) fb.trail.shift();
+            if(fb.trail.length > 1) {
+                bgCtx.beginPath(); let fireGrad = bgCtx.createLinearGradient(fb.trail[0].x, fb.trail[0].y, fb.x, fb.y);
+                fireGrad.addColorStop(0, "rgba(255, 50, 0, 0)"); fireGrad.addColorStop(1, "rgba(255, 140, 0, 0.6)");
+                bgCtx.strokeStyle = fireGrad; bgCtx.lineWidth = fb.size; bgCtx.lineCap = 'round';
+                fb.trail.forEach(t => bgCtx.lineTo(t.x, t.y)); bgCtx.stroke();
+            }
+            bgCtx.beginPath(); bgCtx.arc(fb.x, fb.y, fb.size, 0, Math.PI * 2); bgCtx.fillStyle = "#ffddaa"; bgCtx.shadowColor = "#ff4500"; bgCtx.shadowBlur = 25; bgCtx.fill(); bgCtx.shadowBlur = 0;
+            if(fb.y > bgCanvas.height + 50) fireballs.splice(idx, 1);
+        });
+
+        if (nukeFlash > 0) { bgCtx.fillStyle = `rgba(255, 255, 240, ${Math.min(nukeFlash, 1)})`; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height); nukeFlash -= 0.02; }
+
+        for (let i = 0; i < nukeParticles.length; i++) {
+            let p = nukeParticles[i]; p.x += p.vx; p.y += p.vy; p.life -= p.decay; p.vx *= 0.94; p.vy *= 0.94;
+            if (p.life <= 0) { nukeParticles.splice(i, 1); i--; } else {
+                bgCtx.beginPath(); let currentRadius = Math.max(0.1, p.size * p.life); bgCtx.arc(p.x, p.y, currentRadius, 0, Math.PI * 2);
+                const gradient = bgCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, currentRadius);
+                gradient.addColorStop(0, `rgba(${p.color}, ${p.life})`); gradient.addColorStop(1, `rgba(${p.color}, 0)`);
+                bgCtx.fillStyle = gradient; bgCtx.fill();
+            }
+        }
+        requestAnimationFrame(animateBg);
+    }
+    window.addEventListener('resize', initBg); initBg(); animateBg();
+}
+
+function exportData() {
+    if (!auth.currentUser || auth.currentUser.email !== ADMIN_EMAIL) return alert("Seul l'admin peut exporter les données.");
+    const dataStr = JSON.stringify(allSessionsDB, null, 2); const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob); const downloadNode = document.createElement('a');
+    downloadNode.href = url; downloadNode.download = "backup_poker_stats.json"; downloadNode.style.display = 'none';
+    document.body.appendChild(downloadNode); downloadNode.click(); document.body.removeChild(downloadNode); URL.revokeObjectURL(url);
+}
+
+function importData() {
+    if (!auth.currentUser || auth.currentUser.email !== ADMIN_EMAIL) return alert("Seul l'admin peut importer des données.");
+    const input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.style.display = 'none';
+    document.body.appendChild(input); 
+    input.onchange = e => {
+        const file = e.target.files[0]; if (!file) return; 
+        const reader = new FileReader(); reader.readAsText(file, 'UTF-8');
+        reader.onload = readerEvent => {
+            try {
+                const data = JSON.parse(readerEvent.target.result); let count = 0;
+                data.forEach(s => {
+                    let rawGain = String(s.gain).replace(',', '.'); let gainNumber = parseFloat(rawGain);
+                    let sString = JSON.stringify(s); let match = sString.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+                    let displayDate = "00/00"; let isoDate = "2000-01-01T0000";
+                    if (match) { let jour = match[1], mois = match[2], annee = match[3]; displayDate = `${jour}/${mois}`; isoDate = `${annee}-${mois}-${jour}T${String(count).padStart(4, '0')}`; }
+                    db.collection("sessions").add({ date: displayDate, fullDate: isoDate, hands: parseInt(s.hands) || 0, gain: gainNumber, stake: "NL2", ownerEmail: ADMIN_EMAIL });
+                    count++;
+                });
+                alert("✅ VICTOIRE ! " + count + " sessions importées !");
+            } catch (err) { alert("❌ Erreur de fichier."); }
+        }
+    };
+    input.click(); setTimeout(() => document.body.removeChild(input), 100); 
+}
 
 window.openRangeModal = function() {
     const modal = document.getElementById('range-modal');
     if (modal) {
-        modal.classList.add('show');
-        window.currentRangePage = 0;
-        
-        for(let i = 0; i <= 3; i++) {
-            let p = document.getElementById('range-page-' + i);
-            if(p) p.style.display = 'none';
-        }
-        
-        document.getElementById('range-page-0').style.display = 'block';
-        document.getElementById('range-page-title').innerText = window.rangeTitles[0];
+        modal.classList.add('show'); window.currentRangePage = 0;
+        for(let i = 0; i <= 3; i++) { let p = document.getElementById('range-page-' + i); if(p) p.style.display = 'none'; }
+        document.getElementById('range-page-0').style.display = 'block'; document.getElementById('range-page-title').innerText = window.rangeTitles[0];
     }
 }
-
-window.closeRangeModal = function() {
-    const modal = document.getElementById('range-modal');
-    if (modal) modal.classList.remove('show');
-}
-
+window.closeRangeModal = function() { const modal = document.getElementById('range-modal'); if (modal) modal.classList.remove('show'); }
 window.changeRangePage = function(offset) {
     window.currentRangePage = (window.currentRangePage + offset + 4) % 4; 
-    
-    for(let i = 0; i <= 3; i++) {
-        let p = document.getElementById('range-page-' + i);
-        if(p) p.style.display = 'none';
-    }
-    
+    for(let i = 0; i <= 3; i++) { let p = document.getElementById('range-page-' + i); if(p) p.style.display = 'none'; }
     const activePage = document.getElementById('range-page-' + window.currentRangePage);
-    activePage.style.display = 'block';
-    
-    activePage.style.animation = 'none';
-    activePage.offsetHeight; 
+    activePage.style.display = 'block'; activePage.style.animation = 'none'; activePage.offsetHeight; 
     activePage.style.animation = 'slideInFade 0.3s ease-out forwards';
-    
     document.getElementById('range-page-title').innerText = window.rangeTitles[window.currentRangePage];
 }
+window.addEventListener('click', (e) => { const modal = document.getElementById('range-modal'); if (e.target === modal) window.closeRangeModal(); });
 
-window.addEventListener('click', (e) => {
-    const modal = document.getElementById('range-modal');
-    if (e.target === modal) {
-        window.closeRangeModal();
-    }
-});
-
-// --- 12. CONFIGURATION DYNAMIQUE DE LA BANKROLL ---
 window.editBankrollConfig = function() {
-    const filterElem = document.getElementById('global-filter');
-    const filterValue = filterElem ? filterElem.value : "ALL";
+    const filterElem = document.getElementById('global-filter'); const filterValue = filterElem ? filterElem.value : "ALL";
     const userKey = currentViewEmail || "default";
-
     let defaultStart, defaultGoal;
     if (currentViewEmail === GUEST_EMAIL) {
-        if (filterValue === "NL20") { defaultStart = 0; defaultGoal = 2500; }
-        else if (filterValue === "NL10") { defaultStart = 0; defaultGoal = 1000; }
-        else if (filterValue === "NL5") { defaultStart = 0; defaultGoal = 500; }
-        else if (filterValue === "NL2") { defaultStart = 0; defaultGoal = 100; }
+        if (filterValue === "NL20") { defaultStart = 0; defaultGoal = 2500; } else if (filterValue === "NL10") { defaultStart = 0; defaultGoal = 1000; }
+        else if (filterValue === "NL5") { defaultStart = 0; defaultGoal = 500; } else if (filterValue === "NL2") { defaultStart = 0; defaultGoal = 100; }
         else { defaultStart = 0; defaultGoal = 2500; }
     } else {
-        if (filterValue === "NL20") { defaultStart = 1000; defaultGoal = 2500; }
-        else if (filterValue === "NL10") { defaultStart = 500; defaultGoal = 1000; }
-        else if (filterValue === "NL5") { defaultStart = 70; defaultGoal = 500; }
-        else if (filterValue === "NL2") { defaultStart = 35; defaultGoal = 500; }
+        if (filterValue === "NL20") { defaultStart = 1000; defaultGoal = 2500; } else if (filterValue === "NL10") { defaultStart = 500; defaultGoal = 1000; }
+        else if (filterValue === "NL5") { defaultStart = 70; defaultGoal = 500; } else if (filterValue === "NL2") { defaultStart = 35; defaultGoal = 500; }
         else { defaultStart = 35; defaultGoal = 2500; }
     }
-
-    const savedStart = localStorage.getItem(`startBR_${userKey}_${filterValue}`);
-    const savedGoal = localStorage.getItem(`goalBR_${userKey}_${filterValue}`);
-    
-    let currentStart = savedStart !== null ? parseFloat(savedStart) : defaultStart;
-    let currentGoal = savedGoal !== null ? parseFloat(savedGoal) : defaultGoal;
-
+    const savedStart = localStorage.getItem(`startBR_${userKey}_${filterValue}`); const savedGoal = localStorage.getItem(`goalBR_${userKey}_${filterValue}`);
+    let currentStart = savedStart !== null ? parseFloat(savedStart) : defaultStart; let currentGoal = savedGoal !== null ? parseFloat(savedGoal) : defaultGoal;
     let newStart = prompt(`💰 Bankroll de DÉPART pour la limite ${filterValue} :`, currentStart);
-    if (newStart !== null && newStart.trim() !== "" && !isNaN(newStart)) {
-        localStorage.setItem(`startBR_${userKey}_${filterValue}`, parseFloat(newStart));
-    }
-
+    if (newStart !== null && newStart.trim() !== "" && !isNaN(newStart)) localStorage.setItem(`startBR_${userKey}_${filterValue}`, parseFloat(newStart));
     let newGoal = prompt(`🎯 OBJECTIF de Bankroll pour la limite ${filterValue} :`, currentGoal);
-    if (newGoal !== null && newGoal.trim() !== "" && !isNaN(newGoal)) {
-        localStorage.setItem(`goalBR_${userKey}_${filterValue}`, parseFloat(newGoal));
-    }
-
+    if (newGoal !== null && newGoal.trim() !== "" && !isNaN(newGoal)) localStorage.setItem(`goalBR_${userKey}_${filterValue}`, parseFloat(newGoal));
     updateUI();
 };
