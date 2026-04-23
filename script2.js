@@ -58,6 +58,7 @@ auth.onAuthStateChanged(user => {
 
     if (user && (user.email === ADMIN_EMAIL || user.email === GUEST_EMAIL)) {
         if (!currentViewEmail) { currentViewEmail = user.email; }
+
         if(loginMenu) {
             loginMenu.innerHTML = `
                 <button onclick="switchView('${ADMIN_EMAIL}')">📊 PrRaoult</button>
@@ -65,11 +66,13 @@ auth.onAuthStateChanged(user => {
                 <button onclick="auth.signOut()" style="color: #ff5555; border-top: 1px solid rgba(255,255,255,0.06);">🚪 Log out</button>
             `;
         }
+
         if (dbUnsubscribe) dbUnsubscribe();
         dbUnsubscribe = db.collection("sessions").orderBy("fullDate", "asc").onSnapshot((snapshot) => {
             allSessionsDB = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             updateUI(); 
         });
+
     } else {
         currentViewEmail = null;
         if(loginMenu) {
@@ -91,16 +94,76 @@ function getTargetUserSessions() {
     });
 }
 
+function showToast(message, type = 'success') {
+    // Supprimer un toast existant
+    const existing = document.getElementById('poker-toast');
+    if (existing) existing.remove();
+ 
+    const colors = {
+        success: { bg: 'rgba(74, 222, 128, 0.12)', border: 'rgba(74, 222, 128, 0.4)', text: '#4ade80', icon: '📋' },
+        info:    { bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.4)', text: '#60a5fa', icon: '📤' },
+        error:   { bg: 'rgba(255, 85, 85, 0.12)',  border: 'rgba(255, 85, 85, 0.4)',  text: '#ff5555', icon: '❌' },
+    };
+    const c = colors[type] || colors.success;
+ 
+    const toast = document.createElement('div');
+    toast.id = 'poker-toast';
+    toast.innerHTML = `<span style="font-size:1.1rem;">${c.icon}</span> ${message}`;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: ${c.bg};
+        border: 1px solid ${c.border};
+        color: ${c.text};
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 0.85rem;
+        padding: 12px 24px;
+        border-radius: 12px;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 20px ${c.border};
+        z-index: 999999;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+        pointer-events: none;
+    `;
+    document.body.appendChild(toast);
+ 
+    // Animate in
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(-50%) translateY(0)';
+        });
+    });
+ 
+    // Auto-dismiss after 2.8s
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 2800);
+}
+
 // --- 4. FONCTIONS UTILS ---
 function setTodayDate() {
     const inputDate = document.getElementById('input-date');
     const inputTime = document.getElementById('input-time');
     const now = new Date();
+    
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
+    
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
+
     if(inputDate) inputDate.value = `${year}-${month}-${day}`;
     if(inputTime) inputTime.value = `${hours}:${minutes}`;
 }
@@ -354,58 +417,323 @@ function updateUI() {
     renderChart(handsLabels, profitsNet, filterValue);
 }
 
-// --- 🛑 LA MODALE SESSION DÉTAIL 🛑 ---
-window.openSessionDetail = function(dateStr) {
-    const userSessions = getTargetUserSessions().filter(s => s.fullDate && s.fullDate.startsWith(dateStr));
-    if (userSessions.length === 0) return;
+// ============================================================
+// PATCH FINAL : PARTAGE WHATSAPP + DISCORD + DOWNLOAD
+//
+// 1. Dans index.html <head>, ajoute si pas déjà fait :
+//    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+//
+// 2. Remplace window.shareSession dans script2.js par ce bloc
+// ============================================================
 
-    let profit = 0, hands = 0, rb = 0, totalBB = 0, stakes = new Set(), room = "";
-    userSessions.forEach(s => {
-        profit += (parseFloat(s.gain) || 0);
-        hands += (parseInt(s.hands) || 0);
-        rb += (parseFloat(s.rakeback) || 0);
-        if (s.room) room = s.room;
-        const bbVal = (s.stake === "NL2") ? 0.02 : (s.stake === "NL5") ? 0.05 : (s.stake === "NL20") ? 0.20 : 0.10;
-        if (s.hands > 0) totalBB += (parseFloat(s.gain) || 0) / bbVal;
-        if (s.stake) stakes.add(s.stake);
+window.shareSession = function(textStr) {
+    const modal = document.getElementById('session-modal-shell');
+    const card = modal ? modal.querySelector('.session-card') : null;
+
+    if (!card || typeof html2canvas === 'undefined') {
+        _openSharePanel(null, textStr);
+        return;
+    }
+
+    showToast('Génération de l\'image...', 'info');
+
+    const btns = card.querySelectorAll('button');
+    btns.forEach(b => b.style.visibility = 'hidden');
+
+    const watermark = document.createElement('div');
+    watermark.style.cssText = 'text-align:center;font-family:Montserrat,sans-serif;font-size:0.6rem;font-weight:700;color:rgba(255,255,255,0.2);letter-spacing:2px;text-transform:uppercase;padding:12px 0 2px;';
+    watermark.innerText = 'POKERSTATS';
+    card.appendChild(watermark);
+
+    html2canvas(card, { backgroundColor: null, scale: 2, useCORS: true, logging: false })
+    .then(canvas => {
+        btns.forEach(b => b.style.visibility = '');
+        if (card.contains(watermark)) card.removeChild(watermark);
+
+        const isRealMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+        if (isRealMobile && navigator.canShare) {
+            canvas.toBlob(blob => {
+                const file = new File([blob], 'pokerstats-session.png', { type: 'image/png' });
+                if (navigator.canShare({ files: [file] })) {
+                    navigator.share({ files: [file], title: 'Ma session Poker' })
+                        .then(() => showToast('Partagé !', 'success'))
+                        .catch(() => _openSharePanel(canvas, textStr));
+                } else {
+                    _openSharePanel(canvas, textStr);
+                }
+            }, 'image/png');
+        } else {
+            _openSharePanel(canvas, textStr);
+        }
+    })
+    .catch(err => {
+        btns.forEach(b => b.style.visibility = '');
+        if (card.contains(watermark)) card.removeChild(watermark);
+        _openSharePanel(null, textStr);
     });
+};
 
-    const winrate = hands > 0 ? totalBB / (hands / 100) : 0;
-    const isWin = profit >= 0;
-    const mainSession = userSessions[0];
-    
+function _openSharePanel(canvas, textStr) {
+    // Supprimer un panel existant
+    const existing = document.getElementById('share-panel');
+    if (existing) existing.remove();
+
+    const waText = encodeURIComponent(textStr);
+    const waUrl = `https://wa.me/?text=${waText}`;
+
+    const panel = document.createElement('div');
+    panel.id = 'share-panel';
+    panel.style.cssText = `
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        background: rgba(10, 10, 15, 0.97);
+        border-top: 1px solid rgba(255,255,255,0.08);
+        border-radius: 20px 20px 0 0;
+        padding: 20px 24px 32px;
+        z-index: 9999999;
+        font-family: 'Montserrat', sans-serif;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+        transform: translateY(100%);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    `;
+
+    panel.innerHTML = `
+        <div style="width:40px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 20px;"></div>
+        <div style="font-size:0.7rem;color:#666;text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:18px;text-align:center;">Partager la session</div>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+
+            <!-- WhatsApp -->
+            <a href="${waUrl}" target="_blank" rel="noopener" onclick="setTimeout(()=>_closeSharePanel(),500)" style="
+                display:flex;flex-direction:column;align-items:center;gap:8px;
+                background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.35);
+                border-radius:14px;padding:16px 20px;cursor:pointer;text-decoration:none;
+                transition:all 0.2s;min-width:90px;
+            " onmouseover="this.style.background='rgba(37,211,102,0.2)'" onmouseout="this.style.background='rgba(37,211,102,0.1)'">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="#25d366">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.553 4.103 1.522 5.83L.058 23.25a.75.75 0 00.916.999l5.688-1.49A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.714 9.714 0 01-4.953-1.354l-.355-.211-3.676.964.983-3.585-.231-.368A9.715 9.715 0 012.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
+                </svg>
+                <span style="color:#25d366;font-size:0.72rem;font-weight:700;">WhatsApp</span>
+            </a>
+
+            <!-- Discord : copier l'image -->
+            <button onclick="_copyImageToClipboard(window._shareCanvas)" style="
+                display:flex;flex-direction:column;align-items:center;gap:8px;
+                background:rgba(88,101,242,0.1);border:1px solid rgba(88,101,242,0.35);
+                border-radius:14px;padding:16px 20px;cursor:pointer;
+                transition:all 0.2s;min-width:90px;
+            " onmouseover="this.style.background='rgba(88,101,242,0.2)'" onmouseout="this.style.background='rgba(88,101,242,0.1)'">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="#5865f2">
+                    <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/>
+                </svg>
+                <span style="color:#5865f2;font-size:0.72rem;font-weight:700;">Discord</span>
+                <span style="color:#5865f2;font-size:0.6rem;opacity:0.7;">Copier l'image</span>
+            </button>
+
+            <!-- Télécharger -->
+            <button onclick="_downloadFromPanel(window._shareCanvas)" style="
+                display:flex;flex-direction:column;align-items:center;gap:8px;
+                background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.35);
+                border-radius:14px;padding:16px 20px;cursor:pointer;
+                transition:all 0.2s;min-width:90px;
+            " onmouseover="this.style.background='rgba(59,130,246,0.2)'" onmouseout="this.style.background='rgba(59,130,246,0.1)'">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                <span style="color:#60a5fa;font-size:0.72rem;font-weight:700;">Télécharger</span>
+            </button>
+
+        </div>
+
+        <button onclick="_closeSharePanel()" style="
+            width:100%;margin-top:20px;padding:12px;
+            background:transparent;border:1px solid rgba(255,255,255,0.08);
+            color:#555;border-radius:10px;cursor:pointer;
+            font-family:'Montserrat',sans-serif;font-size:0.8rem;font-weight:600;
+            transition:all 0.2s;
+        " onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#555'">
+            Annuler
+        </button>
+    `;
+
+    // Stocker le canvas globalement pour y accéder depuis les boutons
+    window._shareCanvas = canvas;
+
+    document.body.appendChild(panel);
+
+    // Fond semi-transparent cliquable
+    const overlay = document.createElement('div');
+    overlay.id = 'share-panel-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999998;backdrop-filter:blur(2px);';
+    overlay.onclick = _closeSharePanel;
+    document.body.appendChild(overlay);
+
+    // Animate in
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            panel.style.transform = 'translateY(0)';
+        });
+    });
+}
+
+window._closeSharePanel = function() {
+    const panel = document.getElementById('share-panel');
+    const overlay = document.getElementById('share-panel-overlay');
+    if (panel) {
+        panel.style.transform = 'translateY(100%)';
+        setTimeout(() => panel.remove(), 300);
+    }
+    if (overlay) overlay.remove();
+};
+
+window._copyImageToClipboard = function(canvas) {
+    if (!canvas) {
+        showToast('Image non disponible', 'error');
+        return;
+    }
+    canvas.toBlob(blob => {
+        const item = new ClipboardItem({ 'image/png': blob });
+        navigator.clipboard.write([item])
+            .then(() => {
+                _closeSharePanel();
+                showToast('Image copiée ! Colle-la dans Discord (Ctrl+V)', 'success');
+            })
+            .catch(() => {
+                // Clipboard write peut être bloqué sur http
+                _downloadFromPanel(canvas);
+                showToast('Copie bloquée, image téléchargée à la place', 'info');
+            });
+    }, 'image/png');
+};
+
+window._downloadFromPanel = function(canvas) {
+    if (!canvas) { showToast('Image non disponible', 'error'); return; }
+    const link = document.createElement('a');
+    link.download = 'pokerstats-session.png';
+    link.href = canvas.toDataURL('image/png');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    _closeSharePanel();
+    showToast('Image téléchargée !', 'success');
+};
+
+function _downloadCanvas(canvas) {
+    const link = document.createElement('a');
+    link.download = 'pokerstats-session.png';
+    link.href = canvas.toDataURL('image/png');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Image téléchargée !', 'success');
+}
+
+function _shareTextFallback(textStr) {
+    navigator.clipboard.writeText(textStr)
+        .then(() => showToast('Résumé copié dans le presse-papier !', 'success'))
+        .catch(() => showToast('Erreur lors du partage', 'error'));
+}
+
+// --- 🛑 LA MODALE VIGNETTE INTELLIGENTE 🛑 ---
+window.openSessionDetail = function(dateStr) {
+    const filterElem = document.getElementById('global-filter');
+    const filterValue = filterElem ? filterElem.value : "ALL";
+    const roomFilterElem = document.getElementById('room-filter');
+    const roomFilterValue = roomFilterElem ? roomFilterElem.value : "ALL";
+
+    let daySessions = getTargetUserSessions().filter(s => s.fullDate && s.fullDate.startsWith(dateStr));
+    if (roomFilterValue !== "ALL") {
+        daySessions = daySessions.filter(s => (s.room || "stake") === roomFilterValue);
+    }
+    if (daySessions.length === 0) return;
+
+    let cardsToRender = [];
+
+    // SI VUE GLOBALE : On crée UNE SEULE carte qui fusionne tout
+    if (filterValue === "ALL") {
+        cardsToRender.push({ title: "PROFIT GLOBAL", sessions: daySessions, isGlobal: true });
+    } else {
+        // SI VUE LIMITÉE (ex: NL10) : On crée une carte spécifique
+        const limitSessions = daySessions.filter(s => (s.stake || "NL10") === filterValue);
+        if (limitSessions.length > 0) {
+            cardsToRender.push({ title: "PROFIT " + filterValue, sessions: limitSessions, isGlobal: false });
+        }
+    }
+
+    if (cardsToRender.length === 0) return;
+
     const parts = dateStr.split('-');
     const displayDate = parts[2] + '/' + parts[1] + '/' + parts[0];
-    
-    let displayTime = "00h00";
-    if (mainSession.fullDate && mainSession.fullDate.includes('T')) {
-        displayTime = mainSession.fullDate.split('T')[1].substring(0, 5).replace(':', 'h');
-    }
-    const roomText = room === 'coinpoker' ? '🪙 CoinPoker' : '🎲 Stake';
 
-    const modal = document.getElementById('session-modal-shell');
-    if (modal) {
-        modal.innerHTML = `
-            <div class="session-card ${isWin ? 'win-card' : 'loss-card'}">
+    let finalHtml = `<div style="display: flex; flex-direction: column; gap: 20px; max-height: 100vh; overflow-y: auto; width: 100%; align-items: center; padding: 40px 10px; box-sizing: border-box; overflow-x: hidden;">`;
+
+    cardsToRender.forEach((card) => {
+        let profit = 0, hands = 0, rb = 0, totalBB = 0, stakes = new Set(), roomSet = new Set();
+        card.sessions.forEach(s => {
+            profit += (parseFloat(s.gain) || 0);
+            hands += (parseInt(s.hands) || 0);
+            rb += (parseFloat(s.rakeback) || 0);
+            let r = s.room || 'stake';
+            roomSet.add(r === 'coinpoker' ? '🪙 CoinPoker' : '🎲 Stake');
+            const bbVal = (s.stake === "NL2") ? 0.02 : (s.stake === "NL5") ? 0.05 : (s.stake === "NL20") ? 0.20 : 0.10;
+            if (s.hands > 0) totalBB += (parseFloat(s.gain) || 0) / bbVal;
+            if (s.stake) stakes.add(s.stake);
+        });
+
+        const winrate = hands > 0 ? totalBB / (hands / 100) : 0;
+        const isWin = profit >= 0;
+        const mainSession = card.sessions[0];
+        
+        let displayTime = "00h00";
+        if (!card.isGlobal && mainSession.fullDate && mainSession.fullDate.includes('T')) {
+            displayTime = mainSession.fullDate.split('T')[1].substring(0, 5).replace(':', 'h');
+        }
+
+        let roomsStr = Array.from(roomSet).join(' / ');
+        let stakesStr = Array.from(stakes).join(' / ');
+
+        // Préparation du texte à copier pour le partage
+        let shareText = `🗓️ ${displayDate}\n💰 ${card.title} : ${profit > 0 ? '+' : ''}${profit.toFixed(2)}€\n🎯 Winrate : ${winrate.toFixed(2)} bb/100\n📈 Volume : ${hands} Mains\n🎁 Rakeback : +${rb.toFixed(2)}€`;
+
+        // Ajout d'une marge sous le bouton partager SI le bouton supprimer s'affiche aussi
+        let hasDeleteBtn = (auth.currentUser && auth.currentUser.email === (mainSession.ownerEmail || ADMIN_EMAIL) && !card.isGlobal);
+
+        finalHtml += `
+            <div class="session-card ${isWin ? 'win-card' : 'loss-card'}" style="flex-shrink: 0; margin-bottom: 10px;">
                 <button class="close-session-btn" onclick="document.getElementById('session-modal-shell').classList.remove('show'); setTimeout(() => document.getElementById('session-modal-shell').style.display='none', 300);">✕</button>
-                <div class="session-header">🗓️ ${displayDate} - ${displayTime}</div>
-                <div class="session-profit-title">PROFIT DU JOUR</div>
+                <div class="session-header">🗓️ ${displayDate} ${card.isGlobal ? '' : '- ' + displayTime}</div>
+                <div class="session-profit-title">${card.title}</div>
                 <div class="session-profit-value">${profit > 0 ? '+' : ''}${profit.toFixed(2)}€</div>
                 <div class="session-stats-grid">
                     <div class="session-stat-box"><span class="stat-label">WINRATE</span><span class="stat-val ${isWin ? 'win-text' : 'loss-text'}">${winrate.toFixed(2)} bb/100</span></div>
                     <div class="session-stat-box"><span class="stat-label">VOLUME</span><span class="stat-val">${hands} Mains</span></div>
-                    <div class="session-stat-box"><span class="stat-label">TERRAIN</span><span class="stat-val" style="font-size:0.85rem">${roomText} <br><span style="color:#60a5fa">${Array.from(stakes).join(' / ')}</span></span></div>
+                    <div class="session-stat-box"><span class="stat-label">TERRAIN</span><span class="stat-val" style="font-size:0.85rem">${roomsStr} <br><span style="color:#60a5fa">${stakesStr}</span></span></div>
                     <div class="session-stat-box"><span class="stat-label">RAKEBACK</span><span class="stat-val rb-text">+${rb.toFixed(2)}€</span></div>
                 </div>
-                ${(auth.currentUser && auth.currentUser.email === (mainSession.ownerEmail || ADMIN_EMAIL)) ? 
+                
+                <button class="share-session-btn" onclick="shareSession(\`${shareText.replace(/\n/g, '\\n')}\`)" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; font-family: 'Montserrat'; font-weight: 600; font-size: 0.8rem; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; margin-bottom: ${hasDeleteBtn ? '10px' : '0'};">
+                    <span style="font-size: 1.1rem;">📤</span> Partager le Résultat
+                </button>
+
+                ${hasDeleteBtn ? 
                     `<button class="delete-session-btn" onclick="deleteSession('${mainSession.id}')"><span style="font-size: 1.1rem;">🗑️</span> Supprimer cette session</button>` : ''}
             </div>`;
+    });
+
+    finalHtml += `</div>`;
+
+    const modal = document.getElementById('session-modal-shell');
+    if (modal) {
+        modal.innerHTML = finalHtml;
         modal.style.display = 'flex';
         setTimeout(() => { modal.classList.add('show'); }, 10);
     }
 };
 
-// --- 9. CALENDRIER PNL ---
+// --- 9. CALENDRIER PNL (TON CODE EXACT) ---
 let currentCalDate = new Date(); 
 currentCalDate.setDate(1); 
 
@@ -443,6 +771,9 @@ window.changeCalMonth = function(offset) {
     renderCalendar(filteredSessions);
 };
 
+// ========================================================
+// 🛑 TON CALENDRIER INTACT 🛑
+// ========================================================
 function renderCalendar(filteredSessions) {
     const calContainer = document.getElementById('calendar-view');
     if (!calContainer) return;
@@ -540,7 +871,8 @@ function renderCalendar(filteredSessions) {
             content += `<p class="cal-pnl">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</p>`;
             content += `<span style="position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font-size: 0.6rem; color: #888; font-weight: 600;">${data.hands} h</span>`;
 
-            html += `<div class="${classes}" onclick="openSessionDetail('${dateStr}')" style="cursor: pointer;">${content}</div>`;
+            // ICI L'AJOUT DU ONCLICK POUR OUVRIR LA CARTE 
+            html += `<div class="${classes}" onclick="openSessionDetail('${dateStr}')" style="cursor: pointer; transition: transform 0.15s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">${content}</div>`;
         } else {
             html += `<div class="${classes}">${content}</div>`;
         }
