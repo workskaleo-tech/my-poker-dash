@@ -21,11 +21,12 @@ let allSessionsDB = [];
 let currentViewEmail = null; 
 let previousBr = 0;
 let dbUnsubscribe = null; 
+let editingSessionId = null; 
 
-// --- MAGIE : LOGO USDC VECTORIEL (Taille ajustée à 0.82em pour s'aligner parfaitement au texte) ---
+// --- LOGO USDC VECTORIEL ---
 const USDC_LOGO = `<svg style="width:0.82em; height:0.82em; vertical-align:-0.1em; margin-left:3px;" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path d="M18.8,11.5c-0.2-0.5-0.7-1-1.3-1.3V8h-2.5v2.1c-1.8,0.3-3,1.6-3,3.3c0,2.1,1.8,2.8,3.6,3.2c1.4,0.3,1.9,0.7,1.9,1.4c0,0.8-1,1-1.8,1c-1.2,0-2.2-0.5-2.7-1.1l-1.5,1.8c0.8,0.9,2,1.4,3.1,1.6V24h2.5v-2.1c1.9-0.3,3.3-1.6,3.3-3.6c0-2.4-2.1-3-4-3.4c-1.4-0.3-1.8-0.6-1.8-1.2c0-0.6,0.6-0.8,1.4-0.8c0.9,0,1.8,0.4,2.3,0.9L18.8,11.5z" fill="#fff"/></svg>`;
 
-// TAUX DE CONVERSION PAR RAPPORT À L'USDC
+// TAUX DE CONVERSION
 const RATES_TO_USDC = {
     EUR: 1.08,    
     BTC: 65000,   
@@ -190,6 +191,54 @@ window.toggleCryptoInput = function() {
     }
 };
 
+// --- NOUVEAU : FONCTION POUR MODIFIER UNE SESSION ---
+window.editSession = function(id) {
+    const session = allSessionsDB.find(doc => doc.id === id);
+    if (!session) return;
+
+    if (session.fullDate && session.fullDate.includes('T')) {
+        document.getElementById('input-date').value = session.fullDate.split('T')[0];
+        document.getElementById('input-time').value = session.fullDate.split('T')[1].substring(0, 5);
+    }
+    document.getElementById('input-hands').value = session.hands || '';
+    document.getElementById('input-currency').value = session.currency || 'USDC';
+    document.getElementById('input-crypto').value = session.cryptoAmount || '';
+    
+    let type = "Session";
+    let amount = session.gain || 0;
+    
+    if (session.deposit > 0) { type = "Depot"; amount = session.deposit; }
+    else if (session.withdrawal > 0) { type = "Retrait"; amount = session.withdrawal; }
+    else if (session.rakeback > 0 && session.gain === 0 && session.hands === 0) { type = "Rakeback"; amount = session.rakeback; }
+    
+    document.getElementById('input-type').value = type;
+    document.getElementById('input-amount').value = amount;
+    document.getElementById('input-stake').value = session.stake || 'NL10';
+    document.getElementById('input-room').value = session.room || 'stake';
+
+    window.toggleCryptoInput(); 
+
+    editingSessionId = id;
+    
+    const btnAdd = document.querySelector('.btn-add');
+    if (btnAdd) {
+        btnAdd.innerHTML = "💾 Sauvegarder";
+        btnAdd.style.background = "linear-gradient(135deg, #f59e0b, #d97706)";
+        btnAdd.style.boxShadow = "0 0 15px rgba(245, 158, 11, 0.4)";
+    }
+    
+    dateEdited = true; 
+    
+    // NOUVEAU : Centrage parfait du formulaire à l'écran
+    const formElement = document.querySelector('.entry-form');
+    if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+};
+
+// --- FONCTION AJOUTER / SAUVEGARDER ---
 function addSession() {
     const dateInput = document.getElementById('input-date');
     const timeInput = document.getElementById('input-time');
@@ -222,11 +271,16 @@ function addSession() {
     else if (type === "Retrait") { withdrawal = amount; }
 
     const now = new Date();
-    const sec = String(now.getSeconds()).padStart(2, '0');
-    const ms = String(now.getMilliseconds()).padStart(3, '0');
-    const uniqueFullDate = `${rawDate}T${rawTime}:${sec}.${ms}`; 
+    let uniqueFullDate = `${rawDate}T${rawTime}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}`; 
 
-    db.collection("sessions").add({
+    if (editingSessionId) {
+        const originalSession = allSessionsDB.find(doc => doc.id === editingSessionId);
+        if (originalSession && originalSession.fullDate.startsWith(`${rawDate}T${rawTime}`)) {
+            uniqueFullDate = originalSession.fullDate; 
+        }
+    }
+
+    const payload = {
         date: rawDate.split('-').reverse().slice(0,2).join('/'),
         fullDate: uniqueFullDate,
         hands: finalHands,
@@ -239,14 +293,38 @@ function addSession() {
         stake: stake,
         room: room,
         ownerEmail: auth.currentUser.email 
-    }).then(() => {
-        if(typeof playPop === "function") playPop();
-        if(handsInput) handsInput.value = ''; 
-        if(amountInput) amountInput.value = '';
-        if(document.getElementById('input-crypto')) document.getElementById('input-crypto').value = '';
-        dateEdited = false;
-        setTodayDate();
-    });
+    };
+
+    if (editingSessionId) {
+        db.collection("sessions").doc(editingSessionId).update(payload).then(() => {
+            if(typeof playPop === "function") playPop();
+            resetFormAfterSubmit();
+            showToast("Session modifiée avec succès !");
+        });
+    } else {
+        db.collection("sessions").add(payload).then(() => {
+            if(typeof playPop === "function") playPop();
+            resetFormAfterSubmit();
+        });
+    }
+}
+
+function resetFormAfterSubmit() {
+    document.getElementById('input-hands').value = ''; 
+    document.getElementById('input-amount').value = '';
+    document.getElementById('input-crypto').value = '';
+    
+    editingSessionId = null;
+    
+    const btnAdd = document.querySelector('.btn-add');
+    if (btnAdd) {
+        btnAdd.innerHTML = "Ajouter";
+        btnAdd.style.background = "";
+        btnAdd.style.boxShadow = "";
+    }
+    
+    dateEdited = false;
+    setTodayDate();
 }
 
 function deleteSession(id) {
@@ -384,16 +462,20 @@ function updateUI() {
             sessionTime = s.fullDate.split('T')[1].substring(0, 5).replace(':', 'h');
         }
 
+        const actionButtons = isLookingAtOwnStats ? 
+            `<button onclick="editSession('${s.id}')" title="Modifier" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b; border-radius: 6px; padding: 4px 7px; cursor: pointer; transition: 0.2s; margin-right: 5px;">✏️</button>` +
+            `<button class="btn-delete" onclick="deleteSession('${s.id}')" style="padding: 4px 7px;" title="Supprimer">✕</button>` : '';
+
         if (sDeposit > 0) {
-            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#4ade80;">DÉPÔT</small></td><td style="color: #888;">—</td><td style="color: #4ade80; font-weight: 700;">+${sDeposit.toFixed(2)}${USDC_LOGO}</td><td style="color: #888;">—</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
+            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#4ade80;">DÉPÔT</small></td><td style="color: #888;">—</td><td style="color: #4ade80; font-weight: 700;">+${sDeposit.toFixed(2)}${USDC_LOGO}</td><td style="color: #888;">—</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
         } else if (sWithdrawal > 0) {
-            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#ff5555;">RETRAIT</small></td><td style="color: #888;">—</td><td style="color: #ff5555; font-weight: 700;">-${sWithdrawal.toFixed(2)}${USDC_LOGO}</td><td style="color: #888;">—</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
+            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#ff5555;">RETRAIT</small></td><td style="color: #888;">—</td><td style="color: #ff5555; font-weight: 700;">-${sWithdrawal.toFixed(2)}${USDC_LOGO}</td><td style="color: #888;">—</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
         } else if (sRakeback > 0 && sGain === 0 && sHands === 0) {
             if (isGlobalView) {
-                rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#a78bfa;">RAKEBACK</small></td><td style="color: #888;">—</td><td style="color: #a78bfa; font-weight: 700;">+${sRakeback.toFixed(2)}${USDC_LOGO}</td><td style="color: #888;">—</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
+                rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#a78bfa;">RAKEBACK</small></td><td style="color: #888;">—</td><td style="color: #a78bfa; font-weight: 700;">+${sRakeback.toFixed(2)}${USDC_LOGO}</td><td style="color: #888;">—</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
             }
         } else {
-            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:400; color:#3b82f6;">${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span></small></td><td style="font-weight: 400;">${sHands.toLocaleString()}</td><td style="color: ${sGain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${sGain.toFixed(2)}${USDC_LOGO}${rakebackBadge}${cryptoBadge}</td><td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${gainBB.toFixed(1)} BB</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
+            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:400; color:#3b82f6;">${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span></small></td><td style="font-weight: 400;">${sHands.toLocaleString()}</td><td style="color: ${sGain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${sGain.toFixed(2)}${USDC_LOGO}${rakebackBadge}${cryptoBadge}</td><td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${gainBB.toFixed(1)} BB</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
         }
     });
 
@@ -682,7 +764,7 @@ window.openSessionDetail = function(dateStr) {
         if (profitSOL !== 0) shareText += ` (${profitSOL > 0 ? '+' : ''}${parseFloat(profitSOL.toFixed(2))} SOL)`;
         shareText += `\n🎯 Winrate : ${winrate.toFixed(2)} bb/100\n📈 Volume : ${hands} Mains\n🎁 Rakeback : +${rb.toFixed(2)} USDC`;
 
-        let hasDeleteBtn = (auth.currentUser && auth.currentUser.email === (mainSession.ownerEmail || ADMIN_EMAIL) && !card.isGlobal);
+        let hasActionBtns = (auth.currentUser && auth.currentUser.email === (mainSession.ownerEmail || ADMIN_EMAIL) && !card.isGlobal);
 
         finalHtml += `
             <div class="session-card ${isWin ? 'win-card' : 'loss-card'}" style="flex-shrink: 0; margin-bottom: 10px;">
@@ -697,12 +779,19 @@ window.openSessionDetail = function(dateStr) {
                     <div class="session-stat-box"><span class="stat-label">RAKEBACK</span><span class="stat-val rb-text">+${rb.toFixed(2)} ${USDC_LOGO}</span></div>
                 </div>
                 
-                <button class="share-session-btn" onclick="shareSession(\`${shareText.replace(/\n/g, '\\n')}\`)" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; font-family: 'Montserrat'; font-weight: 600; font-size: 0.8rem; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; margin-bottom: ${hasDeleteBtn ? '10px' : '0'};">
+                <button class="share-session-btn" onclick="shareSession(\`${shareText.replace(/\n/g, '\\n')}\`)" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; font-family: 'Montserrat'; font-weight: 600; font-size: 0.8rem; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; margin-bottom: ${hasActionBtns ? '10px' : '0'};">
                     <span style="font-size: 1.1rem;">📤</span> Partager le Résultat
                 </button>
 
-                ${hasDeleteBtn ? 
-                    `<button class="delete-session-btn" onclick="deleteSession('${mainSession.id}')"><span style="font-size: 1.1rem;">🗑️</span> Supprimer cette session</button>` : ''}
+                ${hasActionBtns ? 
+                    `<div style="display: flex; gap: 10px; width: 100%;">
+                        <button class="delete-session-btn" onclick="document.getElementById('session-modal-shell').classList.remove('show'); setTimeout(() => { document.getElementById('session-modal-shell').style.display='none'; editSession('${mainSession.id}'); }, 300);" style="color: #f59e0b; border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.1); flex: 1;">
+                            <span style="font-size: 1.1rem;">✏️</span> Modifier
+                        </button>
+                        <button class="delete-session-btn" onclick="deleteSession('${mainSession.id}')" style="flex: 1;">
+                            <span style="font-size: 1.1rem;">🗑️</span> Supprimer
+                        </button>
+                    </div>` : ''}
             </div>`;
     });
 
