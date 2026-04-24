@@ -22,6 +22,16 @@ let currentViewEmail = null;
 let previousBr = 0;
 let dbUnsubscribe = null; 
 
+// --- MAGIE : LOGO USDC VECTORIEL (Taille ajustée à 0.82em pour s'aligner parfaitement au texte) ---
+const USDC_LOGO = `<svg style="width:0.82em; height:0.82em; vertical-align:-0.1em; margin-left:3px;" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path d="M18.8,11.5c-0.2-0.5-0.7-1-1.3-1.3V8h-2.5v2.1c-1.8,0.3-3,1.6-3,3.3c0,2.1,1.8,2.8,3.6,3.2c1.4,0.3,1.9,0.7,1.9,1.4c0,0.8-1,1-1.8,1c-1.2,0-2.2-0.5-2.7-1.1l-1.5,1.8c0.8,0.9,2,1.4,3.1,1.6V24h2.5v-2.1c1.9-0.3,3.3-1.6,3.3-3.6c0-2.4-2.1-3-4-3.4c-1.4-0.3-1.8-0.6-1.8-1.2c0-0.6,0.6-0.8,1.4-0.8c0.9,0,1.8,0.4,2.3,0.9L18.8,11.5z" fill="#fff"/></svg>`;
+
+// TAUX DE CONVERSION PAR RAPPORT À L'USDC
+const RATES_TO_USDC = {
+    EUR: 1.08,    
+    BTC: 65000,   
+    SOL: 145      
+};
+
 // --- 3. LE MENU DÉROULANT ---
 function toggleLoginMenu() {
     var m = document.getElementById("login-menu");
@@ -58,7 +68,6 @@ auth.onAuthStateChanged(user => {
 
     if (user && (user.email === ADMIN_EMAIL || user.email === GUEST_EMAIL)) {
         if (!currentViewEmail) { currentViewEmail = user.email; }
-
         if(loginMenu) {
             loginMenu.innerHTML = `
                 <button onclick="switchView('${ADMIN_EMAIL}')">📊 PrRaoult</button>
@@ -66,13 +75,11 @@ auth.onAuthStateChanged(user => {
                 <button onclick="auth.signOut()" style="color: #ff5555; border-top: 1px solid rgba(255,255,255,0.06);">🚪 Log out</button>
             `;
         }
-
         if (dbUnsubscribe) dbUnsubscribe();
         dbUnsubscribe = db.collection("sessions").orderBy("fullDate", "asc").onSnapshot((snapshot) => {
             allSessionsDB = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             updateUI(); 
         });
-
     } else {
         currentViewEmail = null;
         if(loginMenu) {
@@ -95,7 +102,6 @@ function getTargetUserSessions() {
 }
 
 function showToast(message, type = 'success') {
-    // Supprimer un toast existant
     const existing = document.getElementById('poker-toast');
     if (existing) existing.remove();
  
@@ -110,63 +116,79 @@ function showToast(message, type = 'success') {
     toast.id = 'poker-toast';
     toast.innerHTML = `<span style="font-size:1.1rem;">${c.icon}</span> ${message}`;
     toast.style.cssText = `
-        position: fixed;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%) translateY(20px);
-        background: ${c.bg};
-        border: 1px solid ${c.border};
-        color: ${c.text};
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 700;
-        font-size: 0.85rem;
-        padding: 12px 24px;
-        border-radius: 12px;
-        backdrop-filter: blur(12px);
-        box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 20px ${c.border};
-        z-index: 999999;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        white-space: nowrap;
-        opacity: 0;
-        transition: opacity 0.25s ease, transform 0.25s ease;
-        pointer-events: none;
+        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+        background: ${c.bg}; border: 1px solid ${c.border}; color: ${c.text};
+        font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 0.85rem;
+        padding: 12px 24px; border-radius: 12px; backdrop-filter: blur(12px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 20px ${c.border}; z-index: 999999;
+        display: flex; align-items: center; gap: 10px; white-space: nowrap;
+        opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease; pointer-events: none;
     `;
     document.body.appendChild(toast);
  
-    // Animate in
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateX(-50%) translateY(0)';
+            toast.style.opacity = '1'; toast.style.transform = 'translateX(-50%) translateY(0)';
         });
     });
  
-    // Auto-dismiss after 2.8s
     setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(-50%) translateY(10px)';
+        toast.style.opacity = '0'; toast.style.transform = 'translateX(-50%) translateY(10px)';
         setTimeout(() => toast.remove(), 300);
     }, 2800);
 }
 
 // --- 4. FONCTIONS UTILS ---
+let dateEdited = false;
+
 function setTodayDate() {
+    if (dateEdited) return;
     const inputDate = document.getElementById('input-date');
     const inputTime = document.getElementById('input-time');
+    if (!inputDate || !inputTime || document.activeElement === inputDate || document.activeElement === inputTime) return;
+
     const now = new Date();
-    
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
 
-    if(inputDate) inputDate.value = `${year}-${month}-${day}`;
-    if(inputTime) inputTime.value = `${hours}:${minutes}`;
+    if (inputDate.value !== `${year}-${month}-${day}`) inputDate.value = `${year}-${month}-${day}`;
+    if (inputTime.value !== `${hours}:${minutes}`) inputTime.value = `${hours}:${minutes}`;
 }
+
+// --- CONVERTISSEURS USDC ---
+function convertBaseToCrypto() {
+    const baseVal = parseFloat(document.getElementById('input-amount').value) || 0;
+    const currency = document.getElementById('input-currency').value;
+    const cryptoInput = document.getElementById('input-crypto');
+    if (currency !== "USDC" && currency !== "EUR" && RATES_TO_USDC[currency]) {
+        cryptoInput.value = (baseVal / RATES_TO_USDC[currency]).toFixed(currency === "BTC" ? 6 : 2);
+    }
+}
+
+function convertCryptoToBase() {
+    const cryptoVal = parseFloat(document.getElementById('input-crypto').value) || 0;
+    const currency = document.getElementById('input-currency').value;
+    const baseInput = document.getElementById('input-amount');
+    if (currency !== "USDC" && currency !== "EUR" && RATES_TO_USDC[currency]) {
+        baseInput.value = (cryptoVal * RATES_TO_USDC[currency]).toFixed(2);
+    }
+}
+
+window.toggleCryptoInput = function() {
+    const currency = document.getElementById('input-currency').value;
+    const group = document.getElementById('crypto-group');
+    const label = document.getElementById('crypto-label');
+    if (currency === 'USDC' || currency === 'EUR') {
+        group.style.display = 'none';
+    } else {
+        group.style.display = 'flex';
+        label.innerText = 'Montant ' + currency;
+        convertBaseToCrypto(); 
+    }
+};
 
 function addSession() {
     const dateInput = document.getElementById('input-date');
@@ -184,6 +206,9 @@ function addSession() {
     const amount = parseFloat(amountInput ? amountInput.value : 0) || 0;
     const stake = stakeInput ? stakeInput.value : "NL10";
     const room = roomInput ? roomInput.value : "stake";
+
+    const currency = document.getElementById('input-currency') ? document.getElementById('input-currency').value : 'USDC';
+    const cryptoAmount = parseFloat(document.getElementById('input-crypto') ? document.getElementById('input-crypto').value : 0) || 0;
 
     if (!rawDate || !rawTime) return alert("Remplis la date et l'heure !");
     if (auth.currentUser && currentViewEmail !== auth.currentUser.email) return alert("Interdit sur ce profil !");
@@ -206,6 +231,8 @@ function addSession() {
         fullDate: uniqueFullDate,
         hands: finalHands,
         gain: gain,
+        currency: currency,          
+        cryptoAmount: cryptoAmount,  
         rakeback: rakeback,
         deposit: deposit,
         withdrawal: withdrawal,
@@ -216,6 +243,9 @@ function addSession() {
         if(typeof playPop === "function") playPop();
         if(handsInput) handsInput.value = ''; 
         if(amountInput) amountInput.value = '';
+        if(document.getElementById('input-crypto')) document.getElementById('input-crypto').value = '';
+        dateEdited = false;
+        setTodayDate();
     });
 }
 
@@ -338,7 +368,16 @@ function updateUI() {
 
         const currentRoom = s.room || 'stake';
         const roomIcon = currentRoom === 'coinpoker' ? '🪙' : '🎲';
-        const rakebackBadge = (isGlobalView && sRakeback > 0 && sHands > 0) ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${sRakeback.toFixed(2)}€ RB</span>` : '';
+        const rakebackBadge = (isGlobalView && sRakeback > 0 && sHands > 0) ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${sRakeback.toFixed(2)} ${USDC_LOGO} RB</span>` : '';
+
+        let cryptoBadge = "";
+        if (s.currency === "BTC" && s.cryptoAmount) {
+            cryptoBadge = `<br><span style="font-size:0.75rem; color:#aaa; font-weight:600;">${s.cryptoAmount > 0 ? '+' : ''}${s.cryptoAmount} BTC</span>`;
+        } else if (s.currency === "EUR" && s.cryptoAmount) {
+            cryptoBadge = `<br><span style="font-size:0.75rem; color:#aaa; font-weight:600;">${s.cryptoAmount > 0 ? '+' : ''}${s.cryptoAmount} EUR</span>`;
+        } else if (s.currency === "SOL" && s.cryptoAmount) {
+            cryptoBadge = `<br><span style="font-size:0.75rem; color:#aaa; font-weight:600;">${s.cryptoAmount > 0 ? '+' : ''}${s.cryptoAmount} SOL</span>`;
+        }
 
         let sessionTime = "";
         if (s.fullDate && s.fullDate.includes('T')) {
@@ -346,15 +385,15 @@ function updateUI() {
         }
 
         if (sDeposit > 0) {
-            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#4ade80;">DÉPÔT</small></td><td style="color: #888;">—</td><td style="color: #4ade80; font-weight: 700;">+${sDeposit.toFixed(2)}€</td><td style="color: #888;">—</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
+            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#4ade80;">DÉPÔT</small></td><td style="color: #888;">—</td><td style="color: #4ade80; font-weight: 700;">+${sDeposit.toFixed(2)}${USDC_LOGO}</td><td style="color: #888;">—</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
         } else if (sWithdrawal > 0) {
-            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#ff5555;">RETRAIT</small></td><td style="color: #888;">—</td><td style="color: #ff5555; font-weight: 700;">-${sWithdrawal.toFixed(2)}€</td><td style="color: #888;">—</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
+            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#ff5555;">RETRAIT</small></td><td style="color: #888;">—</td><td style="color: #ff5555; font-weight: 700;">-${sWithdrawal.toFixed(2)}${USDC_LOGO}</td><td style="color: #888;">—</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
         } else if (sRakeback > 0 && sGain === 0 && sHands === 0) {
             if (isGlobalView) {
-                rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#a78bfa;">RAKEBACK</small></td><td style="color: #888;">—</td><td style="color: #a78bfa; font-weight: 700;">+${sRakeback.toFixed(2)}€</td><td style="color: #888;">—</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
+                rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#a78bfa;">RAKEBACK</small></td><td style="color: #888;">—</td><td style="color: #a78bfa; font-weight: 700;">+${sRakeback.toFixed(2)}${USDC_LOGO}</td><td style="color: #888;">—</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
             }
         } else {
-            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:400; color:#3b82f6;">${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span></small></td><td style="font-weight: 400;">${sHands.toLocaleString()}</td><td style="color: ${sGain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${sGain.toFixed(2)}€${rakebackBadge}</td><td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${gainBB.toFixed(1)} BB</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
+            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:400; color:#3b82f6;">${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span></small></td><td style="font-weight: 400;">${sHands.toLocaleString()}</td><td style="color: ${sGain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${sGain.toFixed(2)}${USDC_LOGO}${rakebackBadge}${cryptoBadge}</td><td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${gainBB.toFixed(1)} BB</td><td>${isLookingAtOwnStats ? `<button class="btn-delete" onclick="deleteSession('${s.id}')">✕</button>` : ''}</td></tr>`);
         }
     });
 
@@ -368,23 +407,23 @@ function updateUI() {
     if(xpTitle) {
         xpTitle.innerHTML = `
             <span style="cursor:pointer; display:inline-flex; align-items:center; gap:8px;" onclick="window.editBankrollConfig()" title="Modifier Départ et Objectif">
-                🏁 Départ ${startBR}€ <span class="xp-arrow" style="margin:0 5px;">➔</span> 🎯 Objectif ${goalBR}€ <span style="font-size:0.85rem; opacity:0.8; margin-left:5px;">⚙️</span>
+                🏁 Départ ${startBR} ${USDC_LOGO} <span class="xp-arrow" style="margin:0 5px;">➔</span> 🎯 Objectif ${goalBR} ${USDC_LOGO} <span style="font-size:0.85rem; opacity:0.8; margin-left:5px;">⚙️</span>
             </span>
             <span style="margin-left: 15px; padding-left: 15px; border-left: 2px solid #333; color: ${profitColor}; font-weight: 800; text-shadow: 0 0 10px ${profitColor.replace(')', ', 0.3)').replace('rgb', 'rgba')};">
-                📈 Profit : ${profitSign}${profitDepuisStart.toFixed(2)}€
+                📈 Profit : ${profitSign}${profitDepuisStart.toFixed(2)} ${USDC_LOGO}
             </span>
         `;
     }
 
     if (filteredSessions.length > 0 && bestSession && worstSession) {
-        if (document.getElementById('best-session-gain')) document.getElementById('best-session-gain').innerText = `+${bestSession.gain.toFixed(2)}€`;
+        if (document.getElementById('best-session-gain')) document.getElementById('best-session-gain').innerHTML = `+${bestSession.gain.toFixed(2)} ${USDC_LOGO}`;
         if (document.getElementById('best-session-date')) document.getElementById('best-session-date').innerText = `le ${bestSession.date} (${bestSession.stake || "NL10"})`;
-        if (document.getElementById('worst-session-gain')) document.getElementById('worst-session-gain').innerText = `${worstSession.gain.toFixed(2)}€`;
+        if (document.getElementById('worst-session-gain')) document.getElementById('worst-session-gain').innerHTML = `${worstSession.gain.toFixed(2)} ${USDC_LOGO}`;
         if (document.getElementById('worst-session-date')) document.getElementById('worst-session-date').innerText = `le ${worstSession.date} (${worstSession.stake || "NL10"})`;
     } else {
-        if (document.getElementById('best-session-gain')) document.getElementById('best-session-gain').innerText = "0.00€";
+        if (document.getElementById('best-session-gain')) document.getElementById('best-session-gain').innerHTML = `0.00 ${USDC_LOGO}`;
         if (document.getElementById('best-session-date')) document.getElementById('best-session-date').innerText = "--/--";
-        if (document.getElementById('worst-session-gain')) document.getElementById('worst-session-gain').innerText = "0.00€";
+        if (document.getElementById('worst-session-gain')) document.getElementById('worst-session-gain').innerHTML = `0.00 ${USDC_LOGO}`;
         if (document.getElementById('worst-session-date')) document.getElementById('worst-session-date').innerText = "--/--";
     }
 
@@ -396,7 +435,7 @@ function updateUI() {
     }
 
     if(document.getElementById('total-rakeback')) {
-        document.getElementById('total-rakeback').innerText = "+" + totalRakeback.toFixed(2) + "€";
+        document.getElementById('total-rakeback').innerHTML = "+" + totalRakeback.toFixed(2) + " " + USDC_LOGO;
         document.getElementById('total-rakeback').style.color = totalRakeback > 0 ? '#a78bfa' : '#9ca3af';
     }
     if(document.getElementById('rakeback-card')) document.getElementById('rakeback-card').style.display = isGlobalView ? '' : 'none';
@@ -417,15 +456,7 @@ function updateUI() {
     renderChart(handsLabels, profitsNet, filterValue);
 }
 
-// ============================================================
-// PATCH FINAL : PARTAGE WHATSAPP + DISCORD + DOWNLOAD
-//
-// 1. Dans index.html <head>, ajoute si pas déjà fait :
-//    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-//
-// 2. Remplace window.shareSession dans script2.js par ce bloc
-// ============================================================
-
+// --- 🛑 FONCTION DE PARTAGE 🛑 ---
 window.shareSession = function(textStr) {
     const modal = document.getElementById('session-modal-shell');
     const card = modal ? modal.querySelector('.session-card') : null;
@@ -474,7 +505,6 @@ window.shareSession = function(textStr) {
 };
 
 function _openSharePanel(canvas, textStr) {
-    // Supprimer un panel existant
     const existing = document.getElementById('share-panel');
     if (existing) existing.remove();
 
@@ -484,17 +514,11 @@ function _openSharePanel(canvas, textStr) {
     const panel = document.createElement('div');
     panel.id = 'share-panel';
     panel.style.cssText = `
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        background: rgba(10, 10, 15, 0.97);
-        border-top: 1px solid rgba(255,255,255,0.08);
-        border-radius: 20px 20px 0 0;
-        padding: 20px 24px 32px;
-        z-index: 9999999;
-        font-family: 'Montserrat', sans-serif;
-        backdrop-filter: blur(20px);
-        box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
-        transform: translateY(100%);
+        position: fixed; bottom: 0; left: 0; right: 0;
+        background: rgba(10, 10, 15, 0.97); border-top: 1px solid rgba(255,255,255,0.08);
+        border-radius: 20px 20px 0 0; padding: 20px 24px 32px; z-index: 9999999;
+        font-family: 'Montserrat', sans-serif; backdrop-filter: blur(20px);
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.6); transform: translateY(100%);
         transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     `;
 
@@ -502,8 +526,6 @@ function _openSharePanel(canvas, textStr) {
         <div style="width:40px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 20px;"></div>
         <div style="font-size:0.7rem;color:#666;text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:18px;text-align:center;">Partager la session</div>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-
-            <!-- WhatsApp -->
             <a href="${waUrl}" target="_blank" rel="noopener" onclick="setTimeout(()=>_closeSharePanel(),500)" style="
                 display:flex;flex-direction:column;align-items:center;gap:8px;
                 background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.35);
@@ -516,8 +538,6 @@ function _openSharePanel(canvas, textStr) {
                 </svg>
                 <span style="color:#25d366;font-size:0.72rem;font-weight:700;">WhatsApp</span>
             </a>
-
-            <!-- Discord : copier l'image -->
             <button onclick="_copyImageToClipboard(window._shareCanvas)" style="
                 display:flex;flex-direction:column;align-items:center;gap:8px;
                 background:rgba(88,101,242,0.1);border:1px solid rgba(88,101,242,0.35);
@@ -530,8 +550,6 @@ function _openSharePanel(canvas, textStr) {
                 <span style="color:#5865f2;font-size:0.72rem;font-weight:700;">Discord</span>
                 <span style="color:#5865f2;font-size:0.6rem;opacity:0.7;">Copier l'image</span>
             </button>
-
-            <!-- Télécharger -->
             <button onclick="_downloadFromPanel(window._shareCanvas)" style="
                 display:flex;flex-direction:column;align-items:center;gap:8px;
                 background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.35);
@@ -545,67 +563,39 @@ function _openSharePanel(canvas, textStr) {
                 </svg>
                 <span style="color:#60a5fa;font-size:0.72rem;font-weight:700;">Télécharger</span>
             </button>
-
         </div>
-
         <button onclick="_closeSharePanel()" style="
-            width:100%;margin-top:20px;padding:12px;
-            background:transparent;border:1px solid rgba(255,255,255,0.08);
-            color:#555;border-radius:10px;cursor:pointer;
-            font-family:'Montserrat',sans-serif;font-size:0.8rem;font-weight:600;
+            width:100%;margin-top:20px;padding:12px; background:transparent;border:1px solid rgba(255,255,255,0.08);
+            color:#555;border-radius:10px;cursor:pointer; font-family:'Montserrat',sans-serif;font-size:0.8rem;font-weight:600;
             transition:all 0.2s;
-        " onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#555'">
-            Annuler
-        </button>
+        " onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#555'">Annuler</button>
     `;
-
-    // Stocker le canvas globalement pour y accéder depuis les boutons
     window._shareCanvas = canvas;
-
     document.body.appendChild(panel);
-
-    // Fond semi-transparent cliquable
     const overlay = document.createElement('div');
     overlay.id = 'share-panel-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999998;backdrop-filter:blur(2px);';
     overlay.onclick = _closeSharePanel;
     document.body.appendChild(overlay);
-
-    // Animate in
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            panel.style.transform = 'translateY(0)';
-        });
-    });
+    requestAnimationFrame(() => { requestAnimationFrame(() => { panel.style.transform = 'translateY(0)'; }); });
 }
 
 window._closeSharePanel = function() {
     const panel = document.getElementById('share-panel');
     const overlay = document.getElementById('share-panel-overlay');
-    if (panel) {
-        panel.style.transform = 'translateY(100%)';
-        setTimeout(() => panel.remove(), 300);
-    }
+    if (panel) { panel.style.transform = 'translateY(100%)'; setTimeout(() => panel.remove(), 300); }
     if (overlay) overlay.remove();
 };
 
 window._copyImageToClipboard = function(canvas) {
-    if (!canvas) {
-        showToast('Image non disponible', 'error');
-        return;
-    }
+    if (!canvas) { showToast('Image non disponible', 'error'); return; }
     canvas.toBlob(blob => {
         const item = new ClipboardItem({ 'image/png': blob });
-        navigator.clipboard.write([item])
-            .then(() => {
-                _closeSharePanel();
-                showToast('Image copiée ! Colle-la dans Discord (Ctrl+V)', 'success');
-            })
-            .catch(() => {
-                // Clipboard write peut être bloqué sur http
-                _downloadFromPanel(canvas);
-                showToast('Copie bloquée, image téléchargée à la place', 'info');
-            });
+        navigator.clipboard.write([item]).then(() => {
+            _closeSharePanel(); showToast('Image copiée ! Colle-la dans Discord (Ctrl+V)', 'success');
+        }).catch(() => {
+            _downloadFromPanel(canvas); showToast('Copie bloquée, image téléchargée à la place', 'info');
+        });
     }, 'image/png');
 };
 
@@ -614,30 +604,11 @@ window._downloadFromPanel = function(canvas) {
     const link = document.createElement('a');
     link.download = 'pokerstats-session.png';
     link.href = canvas.toDataURL('image/png');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    _closeSharePanel();
-    showToast('Image téléchargée !', 'success');
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    _closeSharePanel(); showToast('Image téléchargée !', 'success');
 };
 
-function _downloadCanvas(canvas) {
-    const link = document.createElement('a');
-    link.download = 'pokerstats-session.png';
-    link.href = canvas.toDataURL('image/png');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Image téléchargée !', 'success');
-}
-
-function _shareTextFallback(textStr) {
-    navigator.clipboard.writeText(textStr)
-        .then(() => showToast('Résumé copié dans le presse-papier !', 'success'))
-        .catch(() => showToast('Erreur lors du partage', 'error'));
-}
-
-// --- 🛑 LA MODALE VIGNETTE INTELLIGENTE 🛑 ---
+// --- 🛑 MODALE VIGNETTES MULTIPLES + CRYPTO + PARTAGE 🛑 ---
 window.openSessionDetail = function(dateStr) {
     const filterElem = document.getElementById('global-filter');
     const filterValue = filterElem ? filterElem.value : "ALL";
@@ -652,11 +623,9 @@ window.openSessionDetail = function(dateStr) {
 
     let cardsToRender = [];
 
-    // SI VUE GLOBALE : On crée UNE SEULE carte qui fusionne tout
     if (filterValue === "ALL") {
         cardsToRender.push({ title: "PROFIT GLOBAL", sessions: daySessions, isGlobal: true });
     } else {
-        // SI VUE LIMITÉE (ex: NL10) : On crée une carte spécifique
         const limitSessions = daySessions.filter(s => (s.stake || "NL10") === filterValue);
         if (limitSessions.length > 0) {
             cardsToRender.push({ title: "PROFIT " + filterValue, sessions: limitSessions, isGlobal: false });
@@ -672,10 +641,17 @@ window.openSessionDetail = function(dateStr) {
 
     cardsToRender.forEach((card) => {
         let profit = 0, hands = 0, rb = 0, totalBB = 0, stakes = new Set(), roomSet = new Set();
+        let profitBTC = 0, profitEUR = 0, profitSOL = 0; 
+
         card.sessions.forEach(s => {
             profit += (parseFloat(s.gain) || 0);
             hands += (parseInt(s.hands) || 0);
             rb += (parseFloat(s.rakeback) || 0);
+            
+            if (s.currency === 'BTC') profitBTC += (parseFloat(s.cryptoAmount) || 0);
+            if (s.currency === 'EUR') profitEUR += (parseFloat(s.cryptoAmount) || 0);
+            if (s.currency === 'SOL') profitSOL += (parseFloat(s.cryptoAmount) || 0);
+
             let r = s.room || 'stake';
             roomSet.add(r === 'coinpoker' ? '🪙 CoinPoker' : '🎲 Stake');
             const bbVal = (s.stake === "NL2") ? 0.02 : (s.stake === "NL5") ? 0.05 : (s.stake === "NL20") ? 0.20 : 0.10;
@@ -695,10 +671,17 @@ window.openSessionDetail = function(dateStr) {
         let roomsStr = Array.from(roomSet).join(' / ');
         let stakesStr = Array.from(stakes).join(' / ');
 
-        // Préparation du texte à copier pour le partage
-        let shareText = `🗓️ ${displayDate}\n💰 ${card.title} : ${profit > 0 ? '+' : ''}${profit.toFixed(2)}€\n🎯 Winrate : ${winrate.toFixed(2)} bb/100\n📈 Volume : ${hands} Mains\n🎁 Rakeback : +${rb.toFixed(2)}€`;
+        let cryptoStr = "";
+        if (profitBTC !== 0) cryptoStr += `<div style="font-size: 1.1rem; color: #888; font-weight: 700; margin-top: 5px;">(${profitBTC > 0 ? '+' : ''}${parseFloat(profitBTC.toFixed(5))} BTC)</div>`;
+        if (profitEUR !== 0) cryptoStr += `<div style="font-size: 1.1rem; color: #888; font-weight: 700; margin-top: 5px;">(${profitEUR > 0 ? '+' : ''}${parseFloat(profitEUR.toFixed(2))} EUR)</div>`;
+        if (profitSOL !== 0) cryptoStr += `<div style="font-size: 1.1rem; color: #888; font-weight: 700; margin-top: 5px;">(${profitSOL > 0 ? '+' : ''}${parseFloat(profitSOL.toFixed(2))} SOL)</div>`;
 
-        // Ajout d'une marge sous le bouton partager SI le bouton supprimer s'affiche aussi
+        let shareText = `🗓️ ${displayDate}\n💰 ${card.title} : ${profit > 0 ? '+' : ''}${profit.toFixed(2)} USDC`;
+        if (profitBTC !== 0) shareText += ` (${profitBTC > 0 ? '+' : ''}${parseFloat(profitBTC.toFixed(5))} BTC)`;
+        if (profitEUR !== 0) shareText += ` (${profitEUR > 0 ? '+' : ''}${parseFloat(profitEUR.toFixed(2))} EUR)`;
+        if (profitSOL !== 0) shareText += ` (${profitSOL > 0 ? '+' : ''}${parseFloat(profitSOL.toFixed(2))} SOL)`;
+        shareText += `\n🎯 Winrate : ${winrate.toFixed(2)} bb/100\n📈 Volume : ${hands} Mains\n🎁 Rakeback : +${rb.toFixed(2)} USDC`;
+
         let hasDeleteBtn = (auth.currentUser && auth.currentUser.email === (mainSession.ownerEmail || ADMIN_EMAIL) && !card.isGlobal);
 
         finalHtml += `
@@ -706,12 +689,12 @@ window.openSessionDetail = function(dateStr) {
                 <button class="close-session-btn" onclick="document.getElementById('session-modal-shell').classList.remove('show'); setTimeout(() => document.getElementById('session-modal-shell').style.display='none', 300);">✕</button>
                 <div class="session-header">🗓️ ${displayDate} ${card.isGlobal ? '' : '- ' + displayTime}</div>
                 <div class="session-profit-title">${card.title}</div>
-                <div class="session-profit-value">${profit > 0 ? '+' : ''}${profit.toFixed(2)}€</div>
+                <div class="session-profit-value" style="text-align: center;">${profit > 0 ? '+' : ''}${profit.toFixed(2)} ${USDC_LOGO}${cryptoStr}</div>
                 <div class="session-stats-grid">
                     <div class="session-stat-box"><span class="stat-label">WINRATE</span><span class="stat-val ${isWin ? 'win-text' : 'loss-text'}">${winrate.toFixed(2)} bb/100</span></div>
                     <div class="session-stat-box"><span class="stat-label">VOLUME</span><span class="stat-val">${hands} Mains</span></div>
                     <div class="session-stat-box"><span class="stat-label">TERRAIN</span><span class="stat-val" style="font-size:0.85rem">${roomsStr} <br><span style="color:#60a5fa">${stakesStr}</span></span></div>
-                    <div class="session-stat-box"><span class="stat-label">RAKEBACK</span><span class="stat-val rb-text">+${rb.toFixed(2)}€</span></div>
+                    <div class="session-stat-box"><span class="stat-label">RAKEBACK</span><span class="stat-val rb-text">+${rb.toFixed(2)} ${USDC_LOGO}</span></div>
                 </div>
                 
                 <button class="share-session-btn" onclick="shareSession(\`${shareText.replace(/\n/g, '\\n')}\`)" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; font-family: 'Montserrat'; font-weight: 600; font-size: 0.8rem; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; margin-bottom: ${hasDeleteBtn ? '10px' : '0'};">
@@ -733,7 +716,7 @@ window.openSessionDetail = function(dateStr) {
     }
 };
 
-// --- 9. CALENDRIER PNL (TON CODE EXACT) ---
+// --- 9. CALENDRIER PNL (VOTRE DESIGN EXACT, MAINTENANT AVEC USDC) ---
 let currentCalDate = new Date(); 
 currentCalDate.setDate(1); 
 
@@ -771,9 +754,6 @@ window.changeCalMonth = function(offset) {
     renderCalendar(filteredSessions);
 };
 
-// ========================================================
-// 🛑 TON CALENDRIER INTACT 🛑
-// ========================================================
 function renderCalendar(filteredSessions) {
     const calContainer = document.getElementById('calendar-view');
     if (!calContainer) return;
@@ -830,7 +810,7 @@ function renderCalendar(filteredSessions) {
     ">
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid ${pnlColor}; border-radius: 8px; padding: 8px 10px; text-align: center;">
             <div style="font-size: 0.58rem; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">💰 PNL Mois</div>
-            <div style="font-size: 1rem; font-weight: 800; color: ${pnlColor};">${monthPnl !== 0 ? pnlSign + monthPnl.toFixed(2) + '€' : '—'}</div>
+            <div style="font-size: 1rem; font-weight: 800; color: ${pnlColor};">${monthPnl !== 0 ? pnlSign + monthPnl.toFixed(2) + ' ' + USDC_LOGO : '—'}</div>
         </div>
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-top: 2px solid rgba(59,130,246,0.6); border-radius: 8px; padding: 8px 10px; text-align: center;">
             <div style="font-size: 0.58rem; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px;">📈 Volume</div>
@@ -868,11 +848,10 @@ function renderCalendar(filteredSessions) {
             else classes += " even";
 
             content += `<span style="position: absolute; top: 3px; right: 4px; font-size: 0.55rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase;">${stakesStr}</span>`;
-            content += `<p class="cal-pnl">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}€</p>`;
+            content += `<p class="cal-pnl" style="display: flex; align-items: center; justify-content: center; gap: 2px;">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}${USDC_LOGO}</p>`;
             content += `<span style="position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font-size: 0.6rem; color: #888; font-weight: 600;">${data.hands} h</span>`;
 
-            // ICI L'AJOUT DU ONCLICK POUR OUVRIR LA CARTE 
-            html += `<div class="${classes}" onclick="openSessionDetail('${dateStr}')" style="cursor: pointer; transition: transform 0.15s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">${content}</div>`;
+            html += `<div class="${classes}" onclick="openSessionDetail('${dateStr}')" style="cursor: pointer; transition: transform 0.15s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">${content}</div>`;
         } else {
             html += `<div class="${classes}">${content}</div>`;
         }
@@ -964,7 +943,7 @@ function animateValue(id, start, end, duration) {
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        obj.innerText = (progress * (end - start) + start).toFixed(2) + "€";
+        obj.innerHTML = (progress * (end - start) + start).toFixed(2) + " " + USDC_LOGO;
         if (progress < 1) window.requestAnimationFrame(step);
     };
     window.requestAnimationFrame(step);
@@ -1136,3 +1115,20 @@ window.editBankrollConfig = function() {
     if (newGoal !== null && newGoal.trim() !== "" && !isNaN(newGoal)) localStorage.setItem(`goalBR_${userKey}_${filterValue}`, parseFloat(newGoal));
     updateUI();
 };
+
+// --- DÉMARRAGE ET ÉCOUTEURS D'INPUTS ---
+document.addEventListener('DOMContentLoaded', () => {
+    const amountUSDC = document.getElementById('input-amount');
+    const amountCrypto = document.getElementById('input-crypto');
+    const inputDate = document.getElementById('input-date');
+    const inputTime = document.getElementById('input-time');
+
+    if (amountUSDC) amountUSDC.addEventListener('input', convertBaseToCrypto);
+    if (amountCrypto) amountCrypto.addEventListener('input', convertCryptoToBase);
+
+    if (inputDate) inputDate.addEventListener('input', () => dateEdited = true);
+    if (inputTime) inputTime.addEventListener('input', () => dateEdited = true);
+    
+    setTodayDate();
+    setInterval(setTodayDate, 30000); 
+});

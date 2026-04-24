@@ -74,7 +74,9 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <small>💰 Bankroll</small>
-                    <div class="value" id="total-br">500.00€</div>
+                    <div class="value" id="total-br">
+                        500.00 <svg style="width:0.85em; height:0.85em; vertical-align:-0.1em; margin-left:2px;" viewBox="0 0 2000 2000" xmlns="http://www.w3.org/2000/svg"><circle cx="1000" cy="1000" r="1000" fill="#2775CA"/><path d="M1292.8 1160.7c0-217.3-176.1-393.4-393.4-393.4V520h-78.5v247.3c-217.3 0-393.4 176.1-393.4 393.4 0 217.3 176.1 393.4 393.4 393.4v247.3h78.5v-247.3c217.3 0 393.4-176.1 393.4-393.4zM899.4 845.8c122.9 0 231.8 71.4 284 175H615.4c52.2-103.6 161.1-175 284-175zm0 629.8c-122.9 0-231.8-71.4-284-175h568c-52.2 103.6-161.1 175-284 175z" fill="#fff"/></svg>
+                    </div>
                 </div>
                 <div class="stat-card">
                     <small>📈 Volume</small>
@@ -90,7 +92,7 @@
                 </div>
                 <div class="stat-card" id="rakeback-card" style="display:none;">
                     <small>💸 Rakeback</small>
-                    <div class="value" id="total-rakeback" style="color: #a78bfa;">+0.00€</div>
+                    <div class="value" id="total-rakeback" style="color: #a78bfa;">+0.00</div>
                 </div>
             </div>
 
@@ -99,7 +101,7 @@
                     <div class="record-icon">🔥</div>
                     <div class="record-info">
                         <small>Plus Gros Braquage</small>
-                        <div class="record-value" id="best-session-gain">0.00€</div>
+                        <div class="record-value" id="best-session-gain">0.00</div>
                         <div class="record-date" id="best-session-date">--/--</div>
                     </div>
                 </div>
@@ -107,7 +109,7 @@
                     <div class="record-icon">🥶</div>
                     <div class="record-info">
                         <small>Pire Bad Beat</small>
-                        <div class="record-value" id="worst-session-gain">0.00€</div>
+                        <div class="record-value" id="worst-session-gain">0.00</div>
                         <div class="record-date" id="worst-session-date">--/--</div>
                     </div>
                 </div>
@@ -115,7 +117,7 @@
 
             <div class="xp-bar-wrapper">
                 <div class="xp-bar-header">
-                    <span class="xp-title" id="xp-title-text">🎯 Objectif 1000€</span>
+                    <span class="xp-title" id="xp-title-text">🎯 Objectif 1000</span>
                     <span id="br-progression-text" class="xp-percentage">0%</span>
                 </div>
                 <div class="xp-track">
@@ -135,51 +137,71 @@
             </div>
         </main>
 
-        <section class="entry-form">
-            <div class="input-group">
-                <label>Date</label>
-                <input type="date" id="input-date">
-            </div>
-            <div class="input-group">
-                <label>Heure</label>
-                <input type="time" id="input-time">
-            </div>
-            <div class="input-group">
-                <label>Mains</label>
-                <input type="number" id="input-hands"> 
+        <section class="entry-form" style="flex-direction: column; align-items: center; gap: 15px;">
+            
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; align-items: flex-end; width: 100%;">
+                <div class="input-group">
+                    <label>Date</label>
+                    <input type="date" id="input-date">
+                </div>
+                <div class="input-group">
+                    <label>Heure</label>
+                    <input type="time" id="input-time">
+                </div>
+                <div class="input-group">
+                    <label>Mains</label>
+                    <input type="number" id="input-hands"> 
+                </div>
+                
+                <div class="input-group">
+                    <label>Montant (€)</label>
+                    <input type="number" step="0.01" id="input-amount" style="width: 110px;">
+                </div>
+                
+                <div class="input-group">
+                    <label>Devise</label>
+                    <select id="input-currency" onchange="window.toggleCryptoInput()" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer; text-align-last: center; min-width: 100px;">
+                        <option value="USDC" selected>💲 USDC</option>
+                        <option value="EUR">💶 EUR</option>
+                        <option value="BTC">🪙 BTC</option>
+                        <option value="SOL">🟣 SOL</option>
+                    </select>
+                </div>
+
+                <div class="input-group" id="crypto-group" style="display: none;">
+                    <label id="crypto-label">Montant Crypto</label>
+                    <input type="number" step="0.000001" id="input-crypto" style="width: 110px;">
+                </div>
             </div>
 
-            <div class="input-group">
-                <label>Montant (€)</label>
-                <input type="number" step="0.01" id="input-amount" style="width: 110px;">
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; align-items: flex-end; width: 100%;">
+                <div class="input-group">
+                    <label>Type</label>
+                    <select id="input-type" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
+                        <option value="Session" selected>🃏 Session</option>
+                        <option value="Rakeback">🎁 Rakeback</option>
+                        <option value="Depot">💳 Dépôt</option>
+                        <option value="Retrait">🏦 Retrait</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Limite</label>
+                    <select id="input-stake" onchange="document.getElementById('global-filter').value = this.value; updateUI();" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
+                        <option value="NL20">NL20 (0.20)</option>
+                        <option value="NL10">NL10 (0.10)</option>
+                        <option value="NL5">NL5 (0.05)</option>
+                        <option value="NL2" selected>NL2 (0.02)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Room</label>
+                    <select id="input-room" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
+                        <option value="coinpoker">🪙 CoinPoker</option>
+                        <option value="stake" selected>🎲 Stake</option>
+                    </select>
+                </div>
+                <button class="btn-add" onclick="addSession()">Ajouter</button>
             </div>
-            <div class="input-group">
-                <label>Type</label>
-                <select id="input-type" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
-                    <option value="Session" selected>🃏 Session</option>
-                    <option value="Rakeback">🎁 Rakeback</option>
-                    <option value="Depot">💳 Dépôt</option>
-                    <option value="Retrait">🏦 Retrait</option>
-                </select>
-            </div>
-
-            <div class="input-group">
-                <label>Limite</label>
-                <select id="input-stake" onchange="document.getElementById('global-filter').value = this.value; updateUI();" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
-                    <option value="NL20">NL20 (0.20€)</option>
-                    <option value="NL10">NL10 (0.10€)</option>
-                    <option value="NL5">NL5 (0.05€)</option>
-                    <option value="NL2" selected>NL2 (0.02€)</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label>Room</label>
-                <select id="input-room" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer;">
-                    <option value="coinpoker">🪙 CoinPoker</option>
-                    <option value="stake" selected>🎲 Stake</option>
-                </select>
-            </div>
-            <button class="btn-add" onclick="addSession()">Ajouter</button>
         </section>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -199,7 +221,7 @@
                                 <tr>
                                     <th>Date</th>
                                     <th>Mains</th>
-                                    <th>Gain (€)</th>
+                                    <th>Gain (USDC)</th>
                                     <th>Gain (BB)</th> 
                                     <th>Action</th>
                                 </tr>
