@@ -270,8 +270,8 @@ function addSession() {
     else if (type === "Depot") { deposit = amount; } 
     else if (type === "Retrait") { withdrawal = amount; }
 
-    const now = new Date();
-    let uniqueFullDate = `${rawDate}T${rawTime}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}`; 
+    // Utilisation d'un timestamp absolu pour garantir l'ordre de saisie chronologique exact
+    let uniqueFullDate = `${rawDate}T${rawTime}:${Date.now()}`; 
 
     if (editingSessionId) {
         const originalSession = allSessionsDB.find(doc => doc.id === editingSessionId);
@@ -323,8 +323,7 @@ function resetFormAfterSubmit() {
         btnAdd.style.boxShadow = "";
     }
     
-    dateEdited = false;
-    setTodayDate();
+    // On ne réinitialise plus la date/heure pour faciliter la saisie multiple à la chaîne
 }
 
 function deleteSession(id) {

@@ -153,24 +153,26 @@
                     <input type="number" id="input-hands"> 
                 </div>
                 
-                <div class="input-group">
-                    <label>Montant (€)</label>
-                    <input type="number" step="0.01" id="input-amount" style="width: 110px;">
-                </div>
-                
-                <div class="input-group">
-                    <label>Devise</label>
-                    <select id="input-currency" onchange="window.toggleCryptoInput()" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer; text-align-last: center; min-width: 100px;">
-                        <option value="USDC" selected>💲 USDC</option>
-                        <option value="EUR">💶 EUR</option>
-                        <option value="BTC">🪙 BTC</option>
-                        <option value="SOL">🟣 SOL</option>
-                    </select>
-                </div>
-
-                <div class="input-group" id="crypto-group" style="display: none;">
-                    <label id="crypto-label">Montant Crypto</label>
-                    <input type="number" step="0.000001" id="input-crypto" style="width: 110px;">
+                <div style="display: flex; gap: 15px; flex-wrap: nowrap; align-items: flex-end;">
+                    <div class="input-group">
+                        <label>Montant (€)</label>
+                        <input type="number" step="0.01" id="input-amount" style="width: 110px;">
+                    </div>
+                    
+                    <div class="input-group" id="crypto-group" style="display: none;">
+                        <label id="crypto-label">Montant Crypto</label>
+                        <input type="number" step="0.000001" id="input-crypto" style="width: 110px;">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Devise</label>
+                        <select id="input-currency" onchange="window.toggleCryptoInput()" style="height: 45px; background: rgba(10, 10, 10, 0.5); border: 1px solid #444; color: white; border-radius: 8px; padding: 0 10px; font-weight: 700; font-family: 'Montserrat'; outline: none; cursor: pointer; text-align-last: center; min-width: 100px;">
+                            <option value="USDC" selected>💲 USDC</option>
+                            <option value="EUR">💶 EUR</option>
+                            <option value="BTC">🪙 BTC</option>
+                            <option value="SOL">🟣 SOL</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
