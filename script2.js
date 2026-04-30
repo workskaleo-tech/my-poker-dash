@@ -1006,6 +1006,7 @@ function renderChart(labels, values, filterValue = "ALL") {
     if(!canvas) return;
     const ctx = canvas.getContext('2d');
     if (window.pokerChart) window.pokerChart.destroy();
+
     let themeColor, coreColor, bgColor, gridColor;
     switch(filterValue) {
         case "NL20": themeColor = 'rgb(236, 72, 153)'; coreColor = 'rgb(253, 242, 248)'; bgColor = 'rgba(236, 72, 153, 0.05)'; gridColor = 'rgba(236, 72, 153, 0.1)'; break;
@@ -1014,14 +1015,117 @@ function renderChart(labels, values, filterValue = "ALL") {
         case "NL2": themeColor = 'rgb(34, 197, 94)'; coreColor = 'rgb(240, 253, 244)'; bgColor = 'rgba(34, 197, 94, 0.05)'; gridColor = 'rgba(34, 197, 94, 0.1)'; break;
         default: themeColor = 'rgb(59, 130, 246)'; coreColor = 'rgb(239, 246, 255)'; bgColor = 'rgba(59, 130, 246, 0.05)'; gridColor = 'rgba(59, 130, 246, 0.1)'; break;
     }
+
     const chartConfig = {
         type: 'line',
-        data: { labels: labels, datasets: [{ label: 'Profit Net', data: values, pointRadius: 0, pointHoverRadius: 5, borderWidth: 0, borderColor: 'rgba(0,0,0,0)', fill: 'start', backgroundColor: bgColor, tension: 0.2 }] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: { left: 0, right: 0, top: 10, bottom: 5 } }, scales: { y: { suggestedMin: 0, grid: { color: gridColor }, ticks: { color: '#9ca3af' } }, x: { type: 'linear', bounds: 'tight', grid: { display: false }, min: labels[0], max: labels[labels.length - 1], ticks: { color: '#9ca3af' } } }, plugins: { legend: { display: false }, neonLine: { neonColor: themeColor, coreColor: coreColor, ballColor: '#ffffff', speed: 2000 }, zoom: { limits: { x: { min: 'original', max: 'original' } }, pan: { enabled: true, mode: 'x' }, zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' } } } },
+        data: { 
+            labels: labels, 
+            datasets: [{ 
+                label: 'Profit Net', 
+                data: values, 
+                pointRadius: 0, 
+                pointHoverRadius: 5, 
+                borderWidth: 0, 
+                borderColor: 'rgba(0,0,0,0)', 
+                fill: 'start', 
+                backgroundColor: bgColor, 
+                tension: 0.2 
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            layout: { padding: { left: 0, right: 0, top: 10, bottom: 5 } }, 
+            scales: { 
+                y: { suggestedMin: 0, grid: { color: gridColor }, ticks: { color: '#9ca3af' } }, 
+                x: { 
+                    type: 'linear', 
+                    bounds: 'tight', 
+                    grid: { display: false }, 
+                    min: labels[0], 
+                    max: labels[labels.length - 1], 
+                    ticks: { color: '#9ca3af' } 
+                } 
+            }, 
+            plugins: { 
+                legend: { display: false }, 
+                neonLine: { neonColor: themeColor, coreColor: coreColor, ballColor: '#ffffff', speed: 2000 }, 
+                zoom: { 
+                    limits: { 
+                        x: { min: 'original', max: 'original' },
+                        y: { min: 'original', max: 'original' } 
+                    }, 
+                    pan: { enabled: false, mode: 'xy' }, 
+                    zoom: { 
+                        // --- ACTIVATION DE LA MOLETTE ICI ---
+                        wheel: { 
+                            enabled: true,
+                            speed: 0.1 // Ajuste la vitesse de zoom (0.1 = 10%)
+                        }, 
+                        pinch: { enabled: true }, 
+                        mode: 'xy', 
+                        drag: {
+                            enabled: true, 
+                            drawTime: 'afterDatasetsDraw',
+                            mode: 'xy',
+                            backgroundColor: themeColor.replace('rgb', 'rgba').replace(')', ', 0.2)'), 
+                            borderColor: themeColor,
+                            borderWidth: 1,
+                            threshold: 10
+                        },
+                        onZoomComplete({chart}) {
+                            if (chart.getZoomLevel() > 1) {
+                                chart.options.plugins.zoom.zoom.drag.enabled = false;
+                                chart.options.plugins.zoom.pan.enabled = true;
+                                chart.canvas.style.cursor = 'move';
+                            } else {
+                                chart.options.plugins.zoom.zoom.drag.enabled = true;
+                                chart.options.plugins.zoom.pan.enabled = false;
+                                chart.canvas.style.cursor = 'cell';
+                            }
+                            chart.update('none'); 
+                        }
+                    } 
+                } 
+            } 
+        },
         plugins: [neonLinePlugin]
     };
+
     window.pokerChart = new Chart(ctx, chartConfig);
-    if (labels.length > 1) { window.pokerChart.neonProgress = 0; window.pokerChart.neonStartTime = Date.now(); window.pokerChart.draw(); }
+    canvas.style.cursor = 'cell';
+
+    // Synchronisation automatique des modes lors de chaque zoom (molette ou drag)
+    window.pokerChart.options.plugins.zoom.zoom.onZoomComplete = ({chart}) => {
+        if (chart.getZoomLevel() > 1) {
+            chart.options.plugins.zoom.zoom.drag.enabled = false;
+            chart.options.plugins.zoom.pan.enabled = true;
+            chart.canvas.style.cursor = 'move';
+        } else {
+            chart.options.plugins.zoom.zoom.drag.enabled = true;
+            chart.options.plugins.zoom.pan.enabled = false;
+            chart.canvas.style.cursor = 'cell';
+        }
+        chart.update('none');
+    };
+
+    const resetBtn = canvas.parentElement.querySelector('button');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            setTimeout(() => {
+                window.pokerChart.options.plugins.zoom.zoom.drag.enabled = true;
+                window.pokerChart.options.plugins.zoom.pan.enabled = false;
+                window.pokerChart.canvas.style.cursor = 'cell';
+                window.pokerChart.update('none');
+            }, 850); 
+        });
+    }
+
+    if (labels.length > 1) { 
+        window.pokerChart.neonProgress = 0; 
+        window.pokerChart.neonStartTime = Date.now(); 
+        window.pokerChart.draw(); 
+    }
 }
 
 function animateValue(id, start, end, duration) {
@@ -1220,3 +1324,20 @@ document.addEventListener('DOMContentLoaded', () => {
     setTodayDate();
     setInterval(setTodayDate, 30000); 
 });
+
+// Charge Tesseract via CDN au préalable dans index.html
+const ocrZone = document.getElementById('ocr-zone');
+const ocrInput = document.getElementById('ocr-input');
+
+ocrZone.onclick = () => ocrInput.click();
+
+ocrInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    showToast("Analyse de l'image en cours...", "info");
+
+    Tesseract.recognize(file, 'fra', { logger: m => console.log(m) }).then(({ data: { text } }) => {
+        parseOcrText(text);
+    });
+};
