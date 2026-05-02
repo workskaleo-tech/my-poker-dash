@@ -55,7 +55,7 @@
                         <span id="logged-label" style="font-size:0.72rem; font-weight:700; color:#888;"></span>
                         <button onclick="logoutUser()" style="background:transparent;border:1px solid #333;color:#555;border-radius:4px;padding:5px 8px;cursor:pointer;font-family:'Montserrat';font-size:0.68rem;font-weight:600;">✕</button>
                     </div>
-                    <button class="btn-ranges" onclick="window.open('ranges.html','_blank')" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-family: 'Montserrat';">
+                    <button onclick="window.open('ranges.html','_blank')" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s; font-family: 'Montserrat';">
                         📚 Mes Ranges
                     </button>
                     <select id="global-filter" class="filter-dropdown" onchange="updateUI()">
@@ -155,7 +155,7 @@
                     <input type="number" id="input-hands"> 
                 </div>
                 
-                <div class="input-row-amount" style="display: flex; gap: 15px; flex-wrap: nowrap; align-items: flex-end;">
+                <div style="display: flex; gap: 15px; flex-wrap: nowrap; align-items: flex-end;">
                     <div class="input-group">
                         <label>Montant (€)</label>
                         <input type="number" step="0.01" id="input-amount" style="width: 110px;">
@@ -219,6 +219,12 @@
             <div class="flip-inner" id="history-flipper">
                 
                 <div class="flip-front">
+                    <!-- À insérer juste avant <div class="table-container"> -->
+<div style="margin-bottom: 10px;">
+    <input type="text" id="list-search" placeholder="🔍 Rechercher une date (ex: 02/05)..." 
+           onkeyup="filterTableList()"
+           style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid #333; color: white; border-radius: 8px;">
+</div>
                     <div class="table-container">
                         <table>
                             <thead>

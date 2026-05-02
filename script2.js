@@ -808,40 +808,15 @@ window.openSessionDetail = function(dateStr) {
 let currentCalDate = new Date(); 
 currentCalDate.setDate(1); 
 
-function syncFlipHeight() {
-    const flipInner = document.getElementById('history-flipper');
-    if (!flipInner) return;
-    const flipBack = flipInner.querySelector('.flip-back');
-    if (!flipBack) return;
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            const h = flipBack.scrollHeight;
-            if (h > 0) {
-                flipInner.style.minHeight = h + 'px';
-                if (flipInner.parentElement) flipInner.parentElement.style.minHeight = h + 'px';
-            }
-        });
-    });
-}
-
 function toggleHistoryFlip() {
     const flipper = document.getElementById('history-flipper');
-    if (!flipper) return;
-
-    flipper.classList.toggle('is-flipped');
-
-    const frontFace = flipper.querySelector('.flip-front');
-    if (frontFace) {
-        frontFace.style.pointerEvents = flipper.classList.contains('is-flipped') ? 'none' : 'auto';
-    }
-
-    if (flipper.classList.contains('is-flipped')) {
-        // Ouverture calendrier : ajuster la hauteur
-        syncFlipHeight();
-    } else {
-        // Retour au tableau : supprimer la hauteur forcée
-        flipper.style.minHeight = '';
-        if (flipper.parentElement) flipper.parentElement.style.minHeight = '';
+    if (flipper) {
+        flipper.classList.toggle('is-flipped');
+        
+        const frontFace = flipper.querySelector('.flip-front');
+        if (frontFace) {
+            frontFace.style.pointerEvents = flipper.classList.contains('is-flipped') ? 'none' : 'auto';
+        }
     }
 }
 
@@ -865,7 +840,6 @@ window.changeCalMonth = function(offset) {
     });
 
     renderCalendar(filteredSessions);
-    syncFlipHeight();
 };
 
 function renderCalendar(filteredSessions) {
@@ -961,9 +935,9 @@ function renderCalendar(filteredSessions) {
             else if (pnl < 0) classes += " loss";
             else classes += " even";
 
-            content += `<span class="cal-stakes" style="position: absolute; top: 3px; right: 4px; font-size: 0.55rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase;">${stakesStr}</span>`;
+            content += `<span style="position: absolute; top: 3px; right: 4px; font-size: 0.55rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase;">${stakesStr}</span>`;
             content += `<p class="cal-pnl" style="display: flex; align-items: center; justify-content: center; gap: 2px;">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}${USDC_LOGO}</p>`;
-            content += `<span class="cal-hands" style="position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font-size: 0.6rem; color: #888; font-weight: 600;">${data.hands} h</span>`;
+            content += `<span style="position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font-size: 0.6rem; color: #888; font-weight: 600;">${data.hands} h</span>`;
 
             html += `<div class="${classes}" onclick="openSessionDetail('${dateStr}')" style="cursor: pointer; transition: transform 0.15s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">${content}</div>`;
         } else {
@@ -1367,3 +1341,16 @@ ocrInput.onchange = (e) => {
         parseOcrText(text);
     });
 };
+
+function filterTableList() {
+    let input = document.getElementById("list-search");
+    let filter = input.value.toLowerCase();
+    let rows = document.querySelectorAll("#history-list tr");
+
+    rows.forEach(row => {
+        // On regarde le texte de la première colonne (Date)
+        let dateCell = row.cells[0].textContent.toLowerCase();
+        row.style.display = dateCell.includes(filter) ? "" : "none";
+    });
+}
+
