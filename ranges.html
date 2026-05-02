@@ -200,6 +200,73 @@ body { font-family:'Montserrat',sans-serif; background:var(--bg); color:var(--te
 ::-webkit-scrollbar { width:5px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:#222; border-radius:4px; }
+
+/* ── RESPONSIVE MOBILE ── */
+@media (max-width: 768px) {
+    .header { padding:10px 14px; flex-wrap:wrap; gap:8px; }
+
+    .main { display:flex; flex-direction:column; height:auto; min-height:0; }
+
+    .sidebar {
+        border-right:none;
+        border-bottom:1px solid var(--border);
+        padding:10px 14px;
+        overflow-y:visible;
+        height:auto;
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+    }
+
+    .sidebar-section { flex-direction:row; flex-wrap:wrap; gap:5px; width:100%; }
+    .sidebar-label { width:100%; margin-bottom:0; }
+
+    .pos-btn, .sit-btn {
+        flex: 0 1 calc(50% - 3px);
+        min-width:0;
+        padding:6px 8px;
+        font-size:0.68rem;
+        justify-content:center;
+        text-align:center;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+    }
+
+    /* Cache la section légende sur mobile */
+    .sidebar > .sidebar-section:last-child { display:none; }
+
+    .content { padding:12px; }
+
+    .sit-header { flex-direction:column; gap:8px; align-items:flex-start; }
+    .sit-stats { width:100%; justify-content:flex-start; }
+    .sit-desc { max-width:100%; }
+
+    .grid-section { grid-template-columns:1fr; }
+
+    .m-cell { font-size:clamp(0.32rem, 1.55vw, 0.52rem); }
+
+    .tips-grid { grid-template-columns:1fr 1fr; }
+
+    .quiz-bar {
+        flex-direction:column;
+        align-items:flex-start;
+        gap:10px;
+        padding:12px 14px;
+    }
+    .quiz-score-group { gap:12px; flex-wrap:wrap; }
+    .quiz-msg { font-size:0.78rem; }
+}
+
+@media (max-width: 480px) {
+    .tips-grid { grid-template-columns:1fr; }
+    .pos-dot { display:none; }
+    .pos-btn, .sit-btn { font-size:0.62rem; }
+    .sit-title { font-size:0.95rem; }
+    .sit-desc { font-size:0.72rem; }
+    .sit-stat-val { font-size:0.9rem; }
+    .header-left .logo { display:none; }
+}
 </style>
 </head>
 <body>
