@@ -66,8 +66,8 @@
                         <option value="NL20">Challenge NL20</option>
                     </select>
                     <select id="room-filter" onchange="updateUI()" style="background: #222; border: 1px solid #333; color: #fff; padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-left: 10px;">
-    <option value="ALL">🌐 Toutes les rooms</option>
-    <option value="stake" selected>🎲 Stake</option> 
+    <option value="ALL" selected>🌐 Toutes les rooms</option>
+    <option value="stake">🎲 Stake</option> 
     <option value="coinpoker">🪙 CoinPoker</option>
 </select>
                 </div>
@@ -220,10 +220,11 @@
                 
                 <div class="flip-front">
                     <!-- À insérer juste avant <div class="table-container"> -->
+<!-- Dans la section <div class="flip-front"> -->
 <div style="margin-bottom: 10px;">
     <input type="text" id="list-search" placeholder="🔍 Rechercher une date (ex: 02/05)..." 
            onkeyup="filterTableList()"
-           style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid #333; color: white; border-radius: 8px;">
+           style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid #333; color: white; border-radius: 8px; box-sizing: border-box;">
 </div>
                     <div class="table-container">
                         <table>

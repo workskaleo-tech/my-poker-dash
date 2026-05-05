@@ -270,8 +270,10 @@ function addSession() {
     else if (type === "Depot") { deposit = amount; } 
     else if (type === "Retrait") { withdrawal = amount; }
 
-    // Utilisation d'un timestamp absolu pour garantir l'ordre de saisie chronologique exact
-    let uniqueFullDate = `${rawDate}T${rawTime}:${Date.now()}`; 
+    // On crée un timestamp de création précis pour le tri
+const creationTimestamp = Date.now();
+// On stocke la date d'affichage ET le timestamp technique pour le tri
+let uniqueFullDate = `${rawDate}T${rawTime}`;
 
     if (editingSessionId) {
         const originalSession = allSessionsDB.find(doc => doc.id === editingSessionId);
@@ -281,8 +283,10 @@ function addSession() {
     }
 
     const payload = {
+        
         date: rawDate.split('-').reverse().slice(0,2).join('/'),
         fullDate: uniqueFullDate,
+        createdAt: creationTimestamp,
         hands: finalHands,
         gain: gain,
         currency: currency,          
@@ -398,12 +402,21 @@ function updateUI() {
     if (entryForm) entryForm.style.display = isLookingAtOwnStats ? 'flex' : 'none';
     if (resetBtn) resetBtn.style.display = isLookingAtOwnStats ? 'block' : 'none';
 
-    let filteredSessions = getTargetUserSessions().filter(s => {
-        let matchStake = (filterValue === "ALL") || ((s.stake || "NL10") === filterValue);
-        let matchRoom = (roomFilterValue === "ALL") || ((s.room || "stake") === roomFilterValue);
-        return matchStake && matchRoom;
-    });
+    //
+let filteredSessions = getTargetUserSessions().filter(s => {
+    let matchStake = (filterValue === "ALL") || ((s.stake || "NL10") === filterValue);
+    let matchRoom = (roomFilterValue === "ALL") || ((s.room || "stake") === roomFilterValue);
+    return matchStake && matchRoom;
+});
 
+// AJOUTEZ CE TRI ICI :
+// On trie d'abord par date/heure, puis par timestamp de création pour départager les doublons
+filteredSessions.sort((a, b) => {
+    if (a.fullDate !== b.fullDate) {
+        return a.fullDate.localeCompare(b.fullDate);
+    }
+    return (a.createdAt || 0) - (b.createdAt || 0);
+});
     let handsLabels = [0]; let profitsNet = [0];  
     let totalHands = 0; let currentProfitNet = 0; let winningSessions = 0;
     let totalBB = 0; let totalRakeback = 0; let totalDeposit = 0; let totalWithdrawal = 0;
