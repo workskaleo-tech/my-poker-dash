@@ -63,6 +63,105 @@ header { margin-bottom: 25px; }
     white-space: nowrap;
     margin-bottom: 6px; 
 }
+.badge.badge-nl   { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 0 10px rgba(59,130,246,0.4); }
+.badge.badge-nl2  { background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 0 0 10px rgba(34,197,94,0.4); }
+.badge.badge-nl5  { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 0 10px rgba(245,158,11,0.4); }
+.badge.badge-nl10 { background: linear-gradient(135deg, #a855f7, #7c3aed); box-shadow: 0 0 10px rgba(168,85,247,0.4); }
+.badge.badge-nl20 { background: linear-gradient(135deg, #ec4899, #be185d); box-shadow: 0 0 10px rgba(236,72,153,0.4); }
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    width: 100%;
+}
+.logo-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.action-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ── LOGIN DROPDOWN ── */
+.btn-login {
+    background: transparent;
+    border: 1px solid #333;
+    color: #555;
+    font-size: 0.7rem;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 8px 10px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+.btn-login:hover { color: #fff; border-color: #555; }
+.login-group { position:relative; }
+.login-menu { display:none; position:absolute; top:calc(100% + 6px); right:0; background:#111118; border:1px solid rgba(255,255,255,0.1); border-radius:8px; overflow:hidden; min-width:140px; z-index:999; box-shadow:0 8px 24px rgba(0,0,0,0.5); animation:menuFadeIn 0.15s ease-out; }
+@keyframes menuFadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+.login-menu.open { display:block; }
+.login-menu button { width:100%; background:transparent; border:none; color:#ccc; padding:10px 16px; text-align:left; cursor:pointer; font-family:'Montserrat',sans-serif; font-weight:600; font-size:0.8rem; transition:background 0.15s; display:flex; align-items:center; gap:8px; }
+.login-menu button:hover { background:rgba(255,255,255,0.07); color:#fff; }
+.login-menu button:first-child { border-bottom:1px solid rgba(255,255,255,0.06); }
+
+/* Filtres */
+.filter-dropdown {
+    background: rgba(30, 30, 30, 0.6);
+    color: white;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 500;
+    font-size: 0.85rem;
+    cursor: pointer;
+    outline: none;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+}
+#global-filter:hover {
+    border-color: #3b82f6 !important;
+    background: rgba(59, 130, 246, 0.1) !important;
+}
+select option { background-color: #1e1e1e; color: #ffffff; }
+
+button[onclick="login()"], 
+button[onclick="openRangeModal()"], 
+#global-filter, 
+#room-filter {
+    height: 32px !important;
+    box-sizing: border-box !important;
+    vertical-align: top !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+#global-filter, #room-filter { padding-top: 0 !important; padding-bottom: 0 !important; line-height: 40px !important; }
+
+/* Bouton Spy */
+.btn-spy {
+    background: rgba(167,139,250,0.08);
+    border: 1px solid rgba(167,139,250,0.35);
+    border-radius: 4px;
+    padding: 8px 10px;
+    line-height: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+.btn-spy:hover {
+    background: rgba(167,139,250,0.2);
+    border-color: #a78bfa;
+    box-shadow: 0 0 10px rgba(167,139,250,0.3);
+}
+.btn-spy svg { display:block; filter:drop-shadow(0 0 3px rgba(167,139,250,0.5)); transition:filter 0.2s; }
+.btn-spy:hover svg { filter:drop-shadow(0 0 7px rgba(167,139,250,0.9)); }
 
 /* --- 3. STATS GRID & CARDS --- */
 .stats-grid { 
@@ -134,7 +233,6 @@ header { margin-bottom: 25px; }
     font-size: 1.35rem;
     white-space: nowrap;
 }
-
 .stat-card:hover {
     transform: translateY(-6px);
     border-color: #3b82f6;
@@ -166,7 +264,6 @@ header { margin-bottom: 25px; }
     font-size: 0.95rem;
     text-transform: uppercase;
     letter-spacing: 2px;
-    /* --- NOUVEAU --- */
     display: flex;
     align-items: center;
     gap: 8px;
@@ -195,11 +292,7 @@ header { margin-bottom: 25px; }
     z-index: 10; pointer-events: none;
     animation: shine-sweep 4s infinite cubic-bezier(0.4, 0.0, 0.2, 1);
 }
-@keyframes shine-sweep {
-    0% { left: -100%; }
-    30% { left: 100%; }
-    100% { left: 100%; }
-}
+@keyframes shine-sweep { 0% { left: -100%; } 30% { left: 100%; } 100% { left: 100%; } }
 .xp-fill {
     height: 100%;
     width: 0%;
@@ -217,15 +310,10 @@ header { margin-bottom: 25px; }
     animation: moveStripes 1.5s linear infinite;
     border-radius: 10px;
 }
-@keyframes moveStripes {
-    0% { background-position: 0 0; }
-    100% { background-position: 40px 0; }
-}
+@keyframes moveStripes { 0% { background-position: 0 0; } 100% { background-position: 40px 0; } }
 
 /* --- 5. ACTIONS & BOUTONS SECONDAIRES --- */
-.share-actions {
-    display: flex; gap: 12px; margin-top: 30px; margin-bottom: 40px; justify-content: center;
-}
+.share-actions { display: flex; gap: 12px; margin-top: 30px; margin-bottom: 40px; justify-content: center; }
 .btn-secondary {
     background: transparent;
     border: 1px solid rgba(59, 130, 246, 0.2);
@@ -243,555 +331,116 @@ header { margin-bottom: 25px; }
 }
 .btn-secondary .icon { font-size: 1rem; }
 
+/* Formulaire Ajout */
 .entry-form {
     background: rgba(30, 30, 30, 0.9);
     padding: 20px;
     border-radius: 12px;
     border: 1px solid #333;
     margin: 0 auto 25px auto; 
-    
-    /* --- MODIFICATION ICI --- */
-    width: 100%;           /* On prend toute la largeur du container */
-    box-sizing: border-box; /* Indispensable pour que le padding ne fasse pas déborder le bloc */
-    /* ------------------------- */
-
-    display: none;          /* Reste géré par le JavaScript */
-    justify-content: center; /* Tes champs restent bien centrés à l'intérieur */
+    width: 100%;           
+    box-sizing: border-box; 
+    display: none;          
+    justify-content: center; 
     gap: 15px; 
     flex-wrap: wrap; 
     align-items: flex-end;
 }
-
 .input-group { display: flex; flex-direction: column; gap: 8px; }
-.input-group label {
-    font-weight: 600; font-size: 0.75rem;
-    text-transform: uppercase; color: #a1a1aa;
-    margin-bottom: 8px; display: block;
-}
+.input-group label { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; color: #a1a1aa; margin-bottom: 8px; display: block; }
 
-/* STYLE DES INPUTS (DARK MODE + HAUTEUR 45PX) */
 .entry-form input {
     background: rgba(10, 10, 10, 0.5) !important;
     border: 1px solid #444 !important;
     color: white !important;
     padding: 12px; border-radius: 8px; outline: none;
-    height: 45px !important; /* MÊME HAUTEUR PARTOUT */
+    height: 45px !important; 
     box-sizing: border-box;
     font-family: 'Montserrat', sans-serif !important;
 }
-
-/* Largeurs spécifiques */
 #input-date { width: 160px; }
 #input-time { width: 110px; }
 #input-hands, #input-gain { width: 110px; }
 
-/* Icônes bleues */
 input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator {
-    filter: invert(43%) sepia(74%) saturate(2421%) hue-rotate(203deg) brightness(101%) contrast(101%) !important;
-    cursor: pointer;
-}
-
-/* Flèches sombres permanentes */
+input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(43%) sepia(74%) saturate(2421%) hue-rotate(203deg) brightness(101%) contrast(101%) !important; cursor: pointer; }
 input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-    opacity: 1 !important;
-    filter: grayscale(100%) brightness(40%) !important;
-    cursor: pointer;
-}
+input[type="number"]::-webkit-outer-spin-button { opacity: 1 !important; filter: grayscale(100%) brightness(40%) !important; cursor: pointer; }
 
-/* Bouton Ajouter aligné */
 .btn-add {
-    background: #3b82f6;
-    color: white; border: none; border-radius: 8px;
-    font-weight: bold; cursor: pointer;
-    height: 45px; /* Même hauteur que les cases */
-    padding: 0 25px;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.3s ease;
+    background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+    height: 45px; padding: 0 25px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;
 }
 .btn-add:hover { background: #2563eb; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4); }
 
 /* --- 7. GRAPHIQUE & TABLEAU --- */
-.chart-container {
-    background: rgba(30, 30, 30, 0.9);
-    border-radius: 12px; border: 1px solid #444;
-    padding: 20px; height: 400px; margin-bottom: 30px;
-}
+.chart-container { background: rgba(30, 30, 30, 0.9); border-radius: 12px; border: 1px solid #444; padding: 20px; height: 400px; margin-bottom: 30px; }
 .history-section { background: rgba(30, 30, 30, 0.9); padding: 25px; border-radius: 12px; border: 1px solid #333; }
-.table-container { max-height: 300px; overflow-y: auto; }
-/* --- ALIGNEMENT PARFAIT DU TABLEAU --- */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed; /* Indispensable pour que les largeurs th/td soient identiques */
-}
+.table-container { max-height: 380px; overflow-y: auto; margin-bottom: 15px; scrollbar-width: thin; scrollbar-color: #444444 #1a1a1a; }
+.table-container::-webkit-scrollbar { width: 6px; }
+.table-container::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 8px; }
+.table-container::-webkit-scrollbar-thumb { background: #333; border-radius: 8px; }
+.table-container::-webkit-scrollbar-thumb:hover { background: #555; }
+.table-container thead th { position: sticky; top: 0; z-index: 1; background: rgba(20, 20, 20, 0.95); }
 
-th, td {
-    padding: 12px 5px;
-    text-align: center;
-    border-bottom: 1px solid #333;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+th, td { padding: 12px 5px; text-align: center; border-bottom: 1px solid #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+th { font-size: 0.75rem; text-transform: uppercase; color: #a1a1aa; letter-spacing: 1.2px; font-weight: 600; }
 
-/* Répartition des 5 colonnes sur 100% de la largeur */
-th:nth-child(1), td:nth-child(1) { width: 20%; } /* Date + Stake */
-th:nth-child(2), td:nth-child(2) { width: 15%; } /* Mains */
-th:nth-child(3), td:nth-child(3) { width: 20%; } /* Gain € */
-th:nth-child(4), td:nth-child(4) { width: 30%; } /* Gain BB (plus large pour la lisibilité) */
-th:nth-child(5), td:nth-child(5) { width: 15%; } /* Action */
-
-/* Style des en-têtes (on garde ton réglage de gras à 600) */
-th {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    color: #a1a1aa;
-    letter-spacing: 1.2px;
-    font-weight: 600; 
-}
-
-/* --- DÉFINITION DES LARGEURS DE COLONNES --- */
-/* Date : colonne étroite */
 th:nth-child(1), td:nth-child(1) { width: 15%; color: #888; } 
-
-/* Mains : colonne moyenne */
 th:nth-child(2), td:nth-child(2) { width: 20%; } 
-
-/* Résultat (€) : colonne large pour la lisibilité */
 th:nth-child(3), td:nth-child(3) { width: 25%; } 
-
-/* BB : colonne large identique au résultat */
 th:nth-child(4), td:nth-child(4) { width: 25%; } 
-
-/* Action : colonne étroite centrée sur le bouton */
 th:nth-child(5), td:nth-child(5) { width: 15%; }
 
-/* 2. On restaure le style du bouton (Carré et Bleu) */
 .btn-delete { 
-    background: rgba(59, 130, 246, 0.05); 
-    border: 1px solid rgba(59, 130, 246, 0.3); 
-    color: #3b82f6; 
-    
-    /* On enlève le padding large pour mettre une taille fixe */
-    padding: 0; 
-    width: 30px; 
-    height: 30px;
-    
-    border-radius: 6px; 
-    cursor: pointer; 
-    transition: all 0.2s ease;
-
-    /* On centre la croix parfaitement */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-}
-
-.btn-delete:hover { 
-    background: #ff5555; 
-    border-color: #ff5555;
-    color: white;
+    background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.3); color: #3b82f6; 
+    padding: 0; width: 30px; height: 30px; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem;
 }
 .btn-delete:hover { background: #ff5555; border-color: #ff5555; color: white; }
 .btn-reset { background: none; border: none; color: #555; font-size: 0.8rem; cursor: pointer; text-decoration: underline; width: 100%; margin-top: 20px; }
 
-/* --- ADAPTATION POUR LES ÉCRANS MOBILES --- */
-@media (max-width: 600px) {
-    .header-top-row {
-        flex-direction: column;
-        align-items: stretch !important;
-    }
-    
-    /* On modifie le comportement du logo et du bouton */
-    .logo-wrapper {
-        width: 100%;
-        justify-content: center; /* On centre tout au lieu d'écarter */
-        flex-wrap: wrap;         /* Permet au bouton de passer à la ligne si l'écran est minuscule */
-        gap: 10px;               /* Crée un espace propre entre les éléments */
-        margin-bottom: 15px !important;
-    }
-    
-    /* On annule la marge gauche forcée du bouton sur mobile */
-    .logo-wrapper button {
-        margin-left: 0 !important; 
-    }
-    
-    .header-filter {
-        width: 100%;
-    }
-    
-    #global-filter {
-        width: 100%; 
-        text-align: center;
-        padding: 12px;
-    }
+@keyframes coin-spin { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(360deg); } }
+.spinning { animation: coin-spin 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; }
 
-    /* Grille 2x2 pour les stats */
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    /* --- FIX BARRE XP SUR MOBILE --- */
-    .xp-title {
-        flex-direction: column;    /* Empile les lignes */
-        align-items: flex-start;   /* Aligne bien à gauche */
-        gap: 4px;                  /* Petit espace entre les deux */
-        font-size: 0.8rem;         /* Police légèrement plus petite pour que ça respire */
-    }
-    
-    .xp-arrow {
-        display: none;             /* On cache la flèche "➔" sur mobile */
-    }
-}
-
-/* --- 9. ANIMATIONS 3D --- */
-@keyframes coin-spin {
-    0% { transform: rotateY(0deg); }
-    100% { transform: rotateY(360deg); }
-}
-.spinning {
-    animation: coin-spin 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    transform-style: preserve-3d;
-}
-
-/* Animation au survol du filtre */
-#global-filter {
-    transition: all 0.3s ease;
-}
-
-#global-filter:hover {
-    border-color: #3b82f6 !important;
-    background: rgba(59, 130, 246, 0.1) !important;
-}
-
-/* --- FIX: Options du menu déroulant en Dark Mode --- */
-select option {
-    background-color: #1e1e1e; /* Force un fond sombre */
-    color: #ffffff;            /* Force le texte en blanc */
-}
-
-/* --- PERSONNALISATION DE LA BARRE DE DÉFILEMENT (SCROLLBAR) --- */
-
-/* Pour Firefox */
-.table-container {
-    scrollbar-width: thin;
-    scrollbar-color: #444444 #1a1a1a;
-}
-
-/* Pour Chrome, Safari et Edge */
-.table-container::-webkit-scrollbar {
-    width: 8px; /* Rend la barre un peu plus fine et élégante */
-}
-
-.table-container::-webkit-scrollbar-track {
-    background: #1a1a1a; /* Le "rail" de la barre, gris très foncé pour se fondre dans le décor */
-    border-radius: 8px;
-}
-
-.table-container::-webkit-scrollbar-thumb {
-    background: #444444; /* La "poignée" de la barre, gris moyen */
-    border-radius: 8px;
-}
-
-.table-container::-webkit-scrollbar-thumb:hover {
-    background: #555555; /* Un peu plus clair quand on passe la souris dessus */
-}
-
-/* --- NOUVEAU HEADER RESPONSIVE --- */
-.header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-    width: 100%;
-}
-
-.logo-group {
-    display: flex;
-    align-items: center;
-    gap: 10px; /* Espace entre le logo et le badge NL10 */
-}
-
-.action-group {
-    display: flex;
-    align-items: center;
-    gap: 10px; /* Espace entre bouton admin et filtre */
-}
-
-.btn-login {
-    background: transparent;
-    border: 1px solid #333;
-    color: #555;
-    font-size: 0.7rem;
-    border-radius: 4px;
-    cursor: pointer;
-    padding: 8px 10px;
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
-    transition: all 0.2s ease;
-}
-
-.btn-login:hover {
-    color: #fff;
-    border-color: #555;
-}
-
-.filter-dropdown {
-    background: rgba(30, 30, 30, 0.6);
-    color: white;
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    padding: 8px 15px;
-    border-radius: 8px;
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 500;
-    font-size: 0.85rem;
-    cursor: pointer;
-    outline: none;
-    backdrop-filter: blur(5px);
-}
-
-/* --- HEADER WRAP (tablettes et fenêtres réduites) --- */
-@media (max-width: 900px) {
-    .header-top {
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-    }
-    .action-group {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 8px;
-    }
-    #room-filter { margin-left: 0 !important; }
-    .filter-dropdown { flex-grow: 1; }
-}
-
-/* --- ADAPTATION MOBILE UNIQUEMENT --- */
-@media (max-width: 600px) {
-    /* ... tes autres règles mobiles existantes ... */
-
-    /* 1. On permet au conteneur du tableau de défiler de gauche à droite */
-    .table-container {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch; /* Rend le défilement très fluide sur iPhone/Android */
-        margin-bottom: 20px;
-    }
-
-    /* 2. On force le tableau à avoir une largeur minimum pour que rien ne soit écrasé */
-    table {
-        min-width: 500px; /* Si l'écran est plus petit que 500px, on pourra scroller horizontalement */
-    }
-
-    /* 3. On réduit un peu les marges internes (padding) et la police pour gagner de la place */
-    th, td {
-        padding: 8px 4px; /* Moins d'espace vide autour des chiffres */
-        font-size: 0.8rem; /* Police un peu plus petite sur mobile */
-    }
-    
-    /* 4. On s'assure que le bouton "Action" (la croix) prenne moins de place */
-    th:nth-child(5), td:nth-child(5) { 
-        width: 10%; 
-    }
-    th:nth-child(4), td:nth-child(4) { 
-        width: 35%; /* On donne encore plus de place aux BB ! */
-    }
-}
-
-/* --- LE PANTHÉON DES RECORDS (Version Mini-Cartes) --- */
-.records-grid {
-    display: grid;
-    /* On permet aux cartes d'être plus petites */
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 10px; /* Moins d'espace entre les cartes */
-    margin-bottom: 20px; /* Moins d'espace sous le bloc */
-}
-
+/* --- LE PANTHÉON DES RECORDS --- */
+.records-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
 .record-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    /* BEAUCOUP moins de padding interne */
-    padding: 10px 12px;
-    border-radius: 8px; /* Angles un peu moins arrondis pour le côté "mini" */
-    background: linear-gradient(145deg, rgba(30, 30, 30, 0.9), rgba(15, 15, 15, 0.9));
-    border: 1px solid #2a2a2a; /* Bordure plus discrète */
-    backdrop-filter: blur(5px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s ease;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    padding: 10px 12px; border-radius: 8px; background: linear-gradient(145deg, rgba(30, 30, 30, 0.9), rgba(15, 15, 15, 0.9));
+    border: 1px solid #2a2a2a; backdrop-filter: blur(5px); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease;
 }
-
 .record-card:hover { transform: translateY(-2px); }
-
-/* Barre de couleur plus fine en haut (2px au lieu de 3px) */
 .best-record { border-top: 2px solid #4ade80; }
 .worst-record { border-top: 2px solid #ff5555; }
-
-.record-icon {
-    /* Icône beaucoup plus petite */
-    font-size: 1.4rem; 
-    margin-right: 0;
-    margin-bottom: 4px; /* Moins d'espace sous l'icône */
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
-    opacity: 0.9; /* Légèrement transparent pour être moins agressif */
-}
-
-.record-info { 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center;
-    width: 100%;
-}
-
-.record-info small {
-    font-size: 0.65rem; /* Titre plus petit */
-    text-transform: uppercase;
-    color: #888; /* Gris plus foncé pour être moins visible */
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    margin-bottom: 2px;
-}
-
-.record-value {
-    font-size: 1.1rem; /* Montant réduit (était 1.4rem) */
-    font-weight: 700;
-    margin-bottom: 0px;
-    line-height: 1.2;
-}
-
+.record-icon { font-size: 1.4rem; margin-right: 0; margin-bottom: 4px; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)); opacity: 0.9; }
+.record-info { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.record-info small { font-size: 0.65rem; text-transform: uppercase; color: #888; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 2px; }
+.record-value { font-size: 1.1rem; font-weight: 700; margin-bottom: 0px; line-height: 1.2; }
 .best-record .record-value { color: #4ade80; text-shadow: 0 0 8px rgba(74, 222, 128, 0.2); }
 .worst-record .record-value { color: #ff5555; text-shadow: 0 0 8px rgba(255, 85, 85, 0.2); }
-
-.record-date {
-    font-size: 0.65rem; /* Date plus petite */
-    color: #666; /* Date très discrète */
-    font-weight: 400;
-    margin-top: 2px;
-}
+.record-date { font-size: 0.65rem; color: #666; font-weight: 400; margin-top: 2px; }
 
 /* --- ANIMATION FLIP 3D --- */
-.flip-container {
-    perspective: 1000px;
-    width: 100%;
-}
-.flip-inner {
-    position: relative;
-    width: 100%;
-    transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
-    -webkit-transform-style: preserve-3d;
-    transform-style: preserve-3d;
-}
-.flip-inner.is-flipped {
-    transform: rotateY(180deg);
-}
-.flip-front, .flip-back {
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    width: 100%;
-}
-.flip-back {
-    position: absolute;
-    top: 0; left: 0;
-    transform: rotateY(180deg);
-    background: rgba(15, 15, 15, 0.8);
-    border-radius: 12px;
-    width: 100%;
-    height: auto;
-    overflow: hidden;
-}
-
-/* --- SCROLLBAR SOMBRE POUR LE CALENDRIER --- */
-.flip-back::-webkit-scrollbar {
-    width: 6px; /* Toute fine */
-}
-.flip-back::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 8px;
-}
-.flip-back::-webkit-scrollbar-thumb {
-    background: #333; /* Gris foncé */
-    border-radius: 8px;
-}
-.flip-back::-webkit-scrollbar-thumb:hover {
-    background: #555; /* S'éclaire un peu au survol */
-}
-
-/* --- HAUTEUR FIXE ET SCROLL POUR L'HISTORIQUE STANDARD --- */
-.table-container {
-    max-height: 380px; /* 👈 Bloque la hauteur pour que ça fasse la même taille que le calendrier */
-    overflow-y: auto;  /* 👈 Active le défilement uniquement à l'intérieur du tableau */
-    margin-bottom: 15px;
-}
-
-/* Applique la même jolie scrollbar sombre qu'au calendrier */
-.table-container::-webkit-scrollbar {
-    width: 6px;
-}
-.table-container::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 8px;
-}
-.table-container::-webkit-scrollbar-thumb {
-    background: #333;
-    border-radius: 8px;
-}
-.table-container::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-
-/* Petite astuce pour que l'en-tête du tableau reste toujours visible quand tu descends */
-.table-container thead th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: rgba(20, 20, 20, 0.95); /* Garde le fond sombre pour masquer les lignes qui passent en dessous */
-}
+.flip-container { perspective: 1000px; width: 100%; }
+.flip-inner { position: relative; width: 100%; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); -webkit-transform-style: preserve-3d; transform-style: preserve-3d; }
+.flip-inner.is-flipped { transform: rotateY(180deg); }
+.flip-front, .flip-back { -webkit-backface-visibility: hidden; backface-visibility: hidden; width: 100%; }
+.flip-back { position: absolute; top: 0; left: 0; transform: rotateY(180deg); background: rgba(15, 15, 15, 0.8); border-radius: 12px; width: 100%; height: auto; overflow: hidden; }
+.flip-back::-webkit-scrollbar { width: 6px; }
+.flip-back::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 8px; }
+.flip-back::-webkit-scrollbar-thumb { background: #333; border-radius: 8px; }
+.flip-back::-webkit-scrollbar-thumb:hover { background: #555; }
 
 /* --- DESIGN DU CALENDRIER PNL --- */
-.calendar-header {
-    text-align: center;
-    font-weight: 800;
-    color: #fff;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: 0.95rem;
-}
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 5px; /* Écart réduit */
-    padding: 0 10px 18px 10px;
-}
-.cal-day-name {
-    text-align: center;
-    font-size: 0.65rem;
-    color: #888;
-    text-transform: uppercase;
-    font-weight: 700;
-    margin-bottom: 2px;
-}
-.cal-day {
-    /* 🛑 On a supprimé 'aspect-ratio: 1' pour éviter que ça ne grandisse trop */
-    height: 52px; /* 👈 Hauteur fixe compacte pour que ça rentre sans scroller */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    border-radius: 6px;
-    background: #222;
-    border: 1px solid #333;
-    position: relative;
-}
+.calendar-header { text-align: center; font-weight: 800; color: #fff; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.95rem; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; padding: 0 10px 18px 10px; }
+.cal-day-name { text-align: center; font-size: 0.65rem; color: #888; text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
+.cal-day { height: 52px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 6px; background: #222; border: 1px solid #333; position: relative !important; }
 .cal-day.empty { background: transparent; border: none; }
-.cal-day .cal-date { position: absolute; top: 3px; left: 5px; font-size: 0.55rem; color: #aaa; font-weight: 600;}
-.cal-day .cal-pnl { font-weight: 700; font-size: 0.8rem; margin-top: 6px;}
-
-/* Les couleurs Trading */
+.cal-date { position: absolute !important; top: 4px !important; left: 4px !important; line-height: 1 !important; font-size: 0.55rem; color: #aaa; font-weight: 600;}
+.cal-pnl { position: absolute !important; top: 50% !important; left: 50% !important; transform: translate(-50%, -50%) !important; margin: 0 !important; width: 100% !important; text-align: center !important; font-weight: 700; font-size: 0.8rem;}
 .cal-day.win { background: rgba(74, 222, 128, 0.15); border: 1px solid rgba(74, 222, 128, 0.4); }
 .cal-day.win .cal-pnl { color: #4ade80; text-shadow: 0 0 8px rgba(74,222,128,0.3); }
 .cal-day.loss { background: rgba(255, 85, 85, 0.15); border: 1px solid rgba(255, 85, 85, 0.4); }
@@ -799,247 +448,36 @@ select option {
 .cal-day.even { background: rgba(100, 100, 100, 0.2); border: 1px solid #555; }
 .cal-day.even .cal-pnl { color: #ccc; }
 
-/* =========================================
-   📱 CORRECTIONS MOBILE (CALENDRIER & MODALE) 
-   ========================================= */
+.room-badge { position: absolute !important; top: 22px !important; left: 4px !important; font-size: 0.45rem !important; padding: 2px 5px !important; border-radius: 4px !important; font-weight: 800 !important; text-transform: uppercase !important; white-space: nowrap !important; z-index: 5 !important; }
+.room-coinpoker { background: rgba(59, 130, 246, 0.15) !important; color: #60a5fa !important; border: 1px solid rgba(59, 130, 246, 0.3) !important; }
+.room-stake { background: rgba(16, 185, 129, 0.15) !important; color: #34d399 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; }
 
-/* 1. Modale Ranges : Centrage Parfait (Sans décalage à gauche) */
+/* ==========================================
+   🛡️ MODALE DÉTAILS DE SESSION
+   ========================================== */
 .modal-overlay {
-    padding: 0 !important; /* 👈 On enlève le padding qui décalait tout ! */
+    position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important;
+    background: rgba(0, 0, 0, 0.7) !important; backdrop-filter: blur(8px) !important; z-index: 99999 !important; 
+    display: none; justify-content: center !important; align-items: center !important; opacity: 0; transition: opacity 0.3s ease;
+    padding: 0 !important;
 }
-
+.modal-overlay.show { display: flex !important; opacity: 1 !important; }
 .modal-content {
-    display: flex !important;
-    flex-direction: column !important;
-    max-height: 85vh !important; 
-    width: 90vw !important; /* 👈 On prend 90% de l'écran, peu importe le téléphone */
-    max-width: 400px !important;
-    margin: 0 auto !important; /* 👈 Centrage horizontal absolu */
-    box-sizing: border-box !important;
+    display: flex !important; flex-direction: column !important; max-height: 85vh !important; 
+    width: 90vw !important; max-width: 400px !important; margin: 0 auto !important; box-sizing: border-box !important;
 }
+.modal-body { flex: 1 !important; overflow-y: auto !important; overflow-x: hidden !important; padding: 15px !important; box-sizing: border-box !important; }
 
-.modal-body {
-    flex: 1 !important; 
-    overflow-y: auto !important; 
-    overflow-x: hidden !important; 
-    padding: 15px !important;
-    box-sizing: border-box !important;
-}
-
-@media (max-width: 500px) {
-    /* ==========================================
-       🛠️ FIX 1 : CALENDRIER (Le "h" sur la même ligne)
-       ========================================== */
-    .cal-day {
-        min-height: 65px !important; 
-        padding-bottom: 18px !important; 
-    }
-    
-    .cal-pnl {
-        font-size: 0.55rem !important; /* 👈 On réduit bien la taille pour que ça rentre */
-        font-weight: 500 !important; /* 👈 On enlève l'effet "trop gras" (normalement c'est 700) */
-        margin-top: -4px !important; /* 👈 On le recentre parfaitement */
-        width: 90% !important; /* 👈 On laisse une petite marge de sécurité sur les bords */
-        white-space: nowrap !important; /* 👈 On interdit formellement de passer à la ligne */
-        overflow: hidden !important; 
-        text-overflow: ellipsis !important; /* Sécurité si un jour tu gagnes +100000.00€ ! */
-    }
-
-    .cal-day span[style*="top: 3px"] {
-        font-size: 0.45rem !important;
-        right: 2px !important;
-    }
-
-    .cal-day span[style*="bottom: 3px"] {
-        font-size: 0.5rem !important;
-        bottom: 2px !important; 
-        white-space: nowrap !important; /* 👈 LA MAGIE EST ICI : Interdit au "h" de sauter une ligne ! */
-    }
-    
-    /* ==========================================
-       🛠️ FIX 2 : RANGES (Centrage parfait des cartes)
-       ========================================== */
-    .range-grid {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important; 
-        gap: 15px !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
-    
-    .range-card {
-        width: 100% !important; 
-        max-width: 320px !important; 
-        padding: 15px !important;
-        box-sizing: border-box !important;
-        margin: 0 auto !important; 
-    }
-}
-
-/* ==========================================
-   🎯 CENTRAGE PARFAIT DU MONTANT PNL
-   ========================================== */
-.cal-day {
-    position: relative !important; /* Indispensable pour centrer les éléments à l'intérieur */
-}
-
-.cal-date {
-    position: absolute !important;
-    top: 4px !important;
-    left: 4px !important;
-    line-height: 1 !important;
-}
-
-.cal-pnl {
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important; /* 👈 La formule magique du centrage absolu */
-    margin: 0 !important; /* Annule les anciens marges qui décalaient tout */
-    width: 100% !important;
-    text-align: center !important;
-}
-
-/* ==========================================
-   🎰 BADGES ROOMS (CoinPoker / Stake)
-   ========================================== */
-.room-badge {
-    position: absolute !important;
-    top: 22px !important; /* Place le badge sous la date */
-    left: 4px !important;
-    font-size: 0.45rem !important;
-    padding: 2px 5px !important;
-    border-radius: 4px !important;
-    font-weight: 800 !important;
-    text-transform: uppercase !important;
-    white-space: nowrap !important;
-    z-index: 5 !important;
-}
-
-.room-coinpoker {
-    background: rgba(59, 130, 246, 0.15) !important;
-    color: #60a5fa !important;
-    border: 1px solid rgba(59, 130, 246, 0.3) !important;
-}
-
-.room-stake {
-    background: rgba(16, 185, 129, 0.15) !important;
-    color: #34d399 !important;
-    border: 1px solid rgba(16, 185, 129, 0.3) !important;
-}
-
-/* ==========================================
-   📏 ALIGNEMENT PARFAIT DES 4 BOUTONS HAUT
-   ========================================== */
-
-/* On cible tes 2 boutons ET tes 2 menus pour les forcer à la même taille */
-button[onclick="login()"], 
-button[onclick="openRangeModal()"], 
-#global-filter, 
-#room-filter {
-    height: 32px !important; /* 👈 On impose 42px à TOUT LE MONDE */
-    box-sizing: border-box !important;
-    vertical-align: top !important; /* 👈 Aligne tout sur la ligne du haut */
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-}
-
-/* On ajuste juste le texte à l'intérieur pour qu'il soit bien centré */
-#global-filter, 
-#room-filter {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    line-height: 40px !important; 
-}
-
-/* === BADGE COULEURS === */
-.badge { transition: background 0.3s, box-shadow 0.3s; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; text-transform: uppercase; font-weight: bold;}
-.badge.badge-nl   { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 0 10px rgba(59,130,246,0.4); }
-.badge.badge-nl2  { background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 0 0 10px rgba(34,197,94,0.4); }
-.badge.badge-nl5  { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 0 10px rgba(245,158,11,0.4); }
-.badge.badge-nl10 { background: linear-gradient(135deg, #a855f7, #7c3aed); box-shadow: 0 0 10px rgba(168,85,247,0.4); }
-.badge.badge-nl20 { background: linear-gradient(135deg, #ec4899, #be185d); box-shadow: 0 0 10px rgba(236,72,153,0.4); }
-
-/* === BOUTON SPY === */
-.btn-spy {
-    background: rgba(167,139,250,0.08);
-    border: 1px solid rgba(167,139,250,0.35);
-    border-radius: 4px;
-    padding: 8px 10px;
-    line-height: 0;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
-.btn-spy:hover {
-    background: rgba(167,139,250,0.2);
-    border-color: #a78bfa;
-    box-shadow: 0 0 10px rgba(167,139,250,0.3);
-}
-.btn-spy svg { display:block; filter:drop-shadow(0 0 3px rgba(167,139,250,0.5)); transition:filter 0.2s; }
-.btn-spy:hover svg { filter:drop-shadow(0 0 7px rgba(167,139,250,0.9)); }
-/* ── LOGIN DROPDOWN ── */
-.login-group { position:relative; }
-.login-menu { display:none; position:absolute; top:calc(100% + 6px); right:0; background:#111118; border:1px solid rgba(255,255,255,0.1); border-radius:8px; overflow:hidden; min-width:140px; z-index:999; box-shadow:0 8px 24px rgba(0,0,0,0.5); animation:menuFadeIn 0.15s ease-out; }
-@keyframes menuFadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
-.login-menu.open { display:block; }
-.login-menu button { width:100%; background:transparent; border:none; color:#ccc; padding:10px 16px; text-align:left; cursor:pointer; font-family:'Montserrat',sans-serif; font-weight:600; font-size:0.8rem; transition:background 0.15s; display:flex; align-items:center; gap:8px; }
-.login-menu button:hover { background:rgba(255,255,255,0.07); color:#fff; }
-.login-menu button:first-child { border-bottom:1px solid rgba(255,255,255,0.06); }
-
-/* ==========================================
-   🛡️ MODALE DÉTAILS DE SESSION (NOUVEAU)
-   ========================================== */
-.modal-overlay {
-    position: fixed !important; 
-    top: 0 !important; 
-    left: 0 !important; 
-    width: 100vw !important; 
-    height: 100vh !important;
-    background: rgba(0, 0, 0, 0.7) !important; 
-    backdrop-filter: blur(8px) !important; 
-    z-index: 99999 !important; 
-    display: none; /* CACHÉ PAR DÉFAUT */
-    justify-content: center !important; 
-    align-items: center !important;
-    opacity: 0; 
-    transition: opacity 0.3s ease;
-}
-
-.modal-overlay.show {
-    display: flex !important; 
-    opacity: 1 !important;
-}
-
-/* 🃏 DESIGN DE LA CARTE */
 .session-card {
-    position: relative;
-    background: rgba(15, 15, 18, 0.95);
-    border-radius: 16px;
-    width: 90%;
-    max-width: 420px;
-    padding: 30px 25px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    backdrop-filter: blur(10px);
-    transform: translateY(0);
-    animation: sessionPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2) forwards;
+    position: relative; background: rgba(15, 15, 18, 0.95); border-radius: 16px; width: 90%; max-width: 420px;
+    padding: 30px 25px; display: flex; flex-direction: column; align-items: center; backdrop-filter: blur(10px);
+    transform: translateY(0); animation: sessionPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2) forwards;
 }
-
 .win-card { border: 1px solid rgba(74, 222, 128, 0.4); box-shadow: 0 15px 50px rgba(0,0,0,0.8), 0 0 30px rgba(74, 222, 128, 0.15), inset 0 0 20px rgba(74, 222, 128, 0.05); }
 .loss-card { border: 1px solid rgba(255, 85, 85, 0.4); box-shadow: 0 15px 50px rgba(0,0,0,0.8), 0 0 30px rgba(255, 85, 85, 0.15), inset 0 0 20px rgba(255, 85, 85, 0.05); }
 
-.close-session-btn {
-    position: absolute; top: 15px; right: 15px;
-    background: transparent; border: none; color: #666;
-    font-size: 1.2rem; cursor: pointer; transition: 0.2s;
-}
+.close-session-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: #666; font-size: 1.2rem; cursor: pointer; transition: 0.2s; }
 .close-session-btn:hover { color: #fff; transform: scale(1.1); }
-
 .session-header { color: #888; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 25px; }
 .session-profit-title { color: #555; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 5px; }
 .session-profit-value { font-size: 3.5rem; font-weight: 900; line-height: 1; margin-bottom: 30px; letter-spacing: -1px; }
@@ -1060,21 +498,18 @@ button[onclick="openRangeModal()"],
 }
 .delete-session-btn:hover { background: #ff5555; color: #fff; box-shadow: 0 0 15px rgba(255, 85, 85, 0.4); }
 
-@keyframes sessionPop {
-    0% { transform: scale(0.8) translateY(30px); opacity: 0; }
-    100% { transform: scale(1) translateY(0); opacity: 1; }
-}
+@keyframes sessionPop { 0% { transform: scale(0.8) translateY(30px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
 
-@media (max-width: 500px) {
-    .session-card { width: 95vw !important; padding: 20px 15px !important; }
-    .session-profit-value { font-size: 2.8rem; }
-    .session-stats-grid { gap: 8px; }
-    .stat-val { font-size: 0.85rem; }
-}
+/* =========================================
+   📱 RESPONSIVE & MOBILE (Media Queries groupées)
+   ========================================= */
 
-/* ==========================================
-   📱 RESPONSIVE COMPLET — MOBILE FIXES
-   ========================================== */
+@media (max-width: 900px) {
+    .header-top { flex-direction: column; align-items: center; gap: 12px; }
+    .action-group { flex-wrap: wrap; justify-content: center; gap: 8px; }
+    #room-filter { margin-left: 0 !important; }
+    .filter-dropdown { flex-grow: 1; }
+}
 
 @media (max-width: 768px) {
     body { padding: 14px; }
@@ -1083,58 +518,68 @@ button[onclick="openRangeModal()"],
 
 @media (max-width: 600px) {
     body { padding: 8px; }
-
-    /* Logo */
+    .header-top-row { flex-direction: column; align-items: stretch !important; }
+    
+    .logo-wrapper { width: 100%; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px !important; }
+    .logo-wrapper button { margin-left: 0 !important; }
     .logo-text { font-size: 2rem; }
     .logo-text span { font-size: 1.5rem; }
 
-    /* Action group mobile : pleine largeur, items étalés */
     .action-group { flex-wrap: wrap; gap: 8px; width: 100%; justify-content: space-between; }
-    #global-filter { flex: 1; min-width: 120px; }
+    .header-filter { width: 100%; }
+    #global-filter { width: 100%; text-align: center; padding: 12px; flex: 1; min-width: 120px; }
     #room-filter { flex: 1; min-width: 120px; margin-left: 0 !important; }
     .btn-ranges { flex: 0 0 auto; }
 
-    /* Graphique moins haut */
-    .chart-container { height: 200px; padding: 12px; margin-bottom: 20px; }
-
-    /* Stat cards compactes */
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .stat-card { padding: 12px 8px; }
     .value { font-size: 1.1rem; }
     #winrate { font-size: 0.9rem; }
-
-    /* Records : 2 colonnes */
     .records-grid { grid-template-columns: repeat(2, 1fr); }
 
-    /* Formulaire d'ajout : empilement complet */
+    .xp-title { flex-direction: column; align-items: flex-start; gap: 4px; font-size: 0.8rem; }
+    .xp-arrow { display: none; }
+
+    .chart-container { height: 200px; padding: 12px; margin-bottom: 20px; }
+
     .entry-form { align-items: stretch !important; }
     .entry-form > div { flex-direction: column !important; align-items: stretch !important; }
     .input-row-amount { flex-wrap: wrap !important; }
     .entry-form .input-group { width: 100%; }
     .entry-form input { width: 100% !important; box-sizing: border-box !important; }
-    .entry-form select {
-        width: 100% !important;
-        min-width: 0 !important;
-        box-sizing: border-box !important;
-    }
+    .entry-form select { width: 100% !important; min-width: 0 !important; box-sizing: border-box !important; }
     .btn-add { width: 100%; }
 
-    /* Boutons Exporter / Importer */
     .share-actions { gap: 8px; }
     .btn-secondary { flex: 1; justify-content: center; }
 
-    .table-container { max-height: 260px; }
+    .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 20px; max-height: 260px; }
+    table { min-width: 500px; }
+    th, td { padding: 8px 4px; font-size: 0.8rem; }
+    th:nth-child(4), td:nth-child(4) { width: 35%; }
+    th:nth-child(5), td:nth-child(5) { width: 10%; }
 
-    /* ── Calendrier PNL mobile ──
-       Cellules simplifiées : jour + montant uniquement. */
-    .flip-back     { overflow-x: hidden !important; }
+    .flip-back { overflow-x: hidden !important; }
     .calendar-grid { gap: 3px !important; padding: 0 5px 8px !important; }
-    .cal-day-name  { font-size: 0.58rem; }
-    .cal-day       { height: 46px !important; min-height: 46px !important; padding-bottom: 0 !important; overflow: hidden !important; }
-    .cal-stakes,
-    .cal-hands,
-    .room-badge    { display: none !important; }
-    .cal-pnl       { font-size: 0.43rem !important; font-weight: 700 !important; white-space: nowrap !important; overflow: hidden !important; }
-    .cal-pnl svg   { display: none !important; }
-    .cal-date      { font-size: 0.48rem !important; top: 2px !important; left: 3px !important; }
+    .cal-day-name { font-size: 0.58rem; }
+    .cal-day { height: 46px !important; min-height: 46px !important; padding-bottom: 0 !important; overflow: hidden !important; }
+    .cal-stakes, .cal-hands, .room-badge { display: none !important; }
+    .cal-pnl { font-size: 0.43rem !important; font-weight: 700 !important; white-space: nowrap !important; overflow: hidden !important; }
+    .cal-pnl svg { display: none !important; }
+    .cal-date { font-size: 0.48rem !important; top: 2px !important; left: 3px !important; }
 }
 
+@media (max-width: 500px) {
+    .cal-day { min-height: 65px !important; padding-bottom: 18px !important; }
+    .cal-pnl { font-size: 0.55rem !important; font-weight: 500 !important; margin-top: -4px !important; width: 90% !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+    .cal-day span[style*="top: 3px"] { font-size: 0.45rem !important; right: 2px !important; }
+    .cal-day span[style*="bottom: 3px"] { font-size: 0.5rem !important; bottom: 2px !important; white-space: nowrap !important; }
+
+    .range-grid { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 15px !important; width: 100% !important; box-sizing: border-box !important; }
+    .range-card { width: 100% !important; max-width: 320px !important; padding: 15px !important; box-sizing: border-box !important; margin: 0 auto !important; }
+
+    .session-card { width: 95vw !important; padding: 20px 15px !important; }
+    .session-profit-value { font-size: 2.8rem; }
+    .session-stats-grid { gap: 8px; }
+    .stat-val { font-size: 0.85rem; }
+}

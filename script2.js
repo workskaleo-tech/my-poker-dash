@@ -190,7 +190,23 @@ window.toggleCryptoInput = function() {
         convertBaseToCrypto(); 
     }
 };
+// --- NOUVEAU : GESTION DYNAMIQUE DU FORMULAIRE (POKER VS CASINO) ---
+window.toggleFormMode = function() {
+    const type = document.getElementById('input-type').value;
+    const groupHands = document.getElementById('group-hands');
+    const groupStake = document.getElementById('group-stake');
+    const groupCasinoGame = document.getElementById('group-casino-game');
 
+    if (type === 'Casino') {
+        if (groupHands) groupHands.style.display = 'none';
+        if (groupStake) groupStake.style.display = 'none';
+        if (groupCasinoGame) groupCasinoGame.style.display = 'flex';
+    } else {
+        if (groupHands) groupHands.style.display = 'flex';
+        if (groupStake) groupStake.style.display = 'flex';
+        if (groupCasinoGame) groupCasinoGame.style.display = 'none';
+    }
+};
 // --- NOUVEAU : FONCTION POUR MODIFIER UNE SESSION ---
 window.editSession = function(id) {
     const session = allSessionsDB.find(doc => doc.id === id);
@@ -205,11 +221,12 @@ window.editSession = function(id) {
     document.getElementById('input-crypto').value = session.cryptoAmount || '';
     
     let type = "Session";
-    let amount = session.gain || 0;
-    
-    if (session.deposit > 0) { type = "Depot"; amount = session.deposit; }
-    else if (session.withdrawal > 0) { type = "Retrait"; amount = session.withdrawal; }
-    else if (session.rakeback > 0 && session.gain === 0 && session.hands === 0) { type = "Rakeback"; amount = session.rakeback; }
+let amount = session.gain || 0;
+
+if (session.deposit > 0) { type = "Depot"; amount = session.deposit; }
+else if (session.withdrawal > 0) { type = "Retrait"; amount = session.withdrawal; }
+else if (session.rakeback > 0 && session.gain === 0 && session.hands === 0) { type = "Rakeback"; amount = session.rakeback; }
+else if (session.casino !== undefined && session.casino !== 0) { type = "Casino"; amount = session.casino; } // NOUVEAU
     
     document.getElementById('input-type').value = type;
     document.getElementById('input-amount').value = amount;
@@ -250,30 +267,30 @@ function addSession() {
     
     const rawDate = dateInput.value;
     const rawTime = timeInput.value;
-    const hands = parseInt(handsInput ? handsInput.value : 0) || 0;
     const type = typeInput ? typeInput.value : "Session";
+    // Les mains sont à 0 si c'est un retrait, un dépôt, ou du casino
+    const hands = (type === "Session") ? (parseInt(handsInput ? handsInput.value : 0) || 0) : 0;
     const amount = parseFloat(amountInput ? amountInput.value : 0) || 0;
     const stake = stakeInput ? stakeInput.value : "NL10";
     const room = roomInput ? roomInput.value : "stake";
 
     const currency = document.getElementById('input-currency') ? document.getElementById('input-currency').value : 'USDC';
     const cryptoAmount = parseFloat(document.getElementById('input-crypto') ? document.getElementById('input-crypto').value : 0) || 0;
+    const casinoGame = document.getElementById('input-casino-game') ? document.getElementById('input-casino-game').value : 'Dice';
 
     if (!rawDate || !rawTime) return alert("Remplis la date et l'heure !");
     if (auth.currentUser && currentViewEmail !== auth.currentUser.email) return alert("Interdit sur ce profil !");
 
-    let gain = 0, rakeback = 0, deposit = 0, withdrawal = 0;
-    let finalHands = 0;
+    let gain = 0, rakeback = 0, deposit = 0, withdrawal = 0, casino = 0;
 
-    if (type === "Session") { gain = amount; finalHands = hands; } 
+    if (type === "Session") { gain = amount; } 
     else if (type === "Rakeback") { rakeback = amount; } 
     else if (type === "Depot") { deposit = amount; } 
     else if (type === "Retrait") { withdrawal = amount; }
+    else if (type === "Casino") { casino = amount; } // NOUVEAU
 
-    // On crée un timestamp de création précis pour le tri
-const creationTimestamp = Date.now();
-// On stocke la date d'affichage ET le timestamp technique pour le tri
-let uniqueFullDate = `${rawDate}T${rawTime}`;
+    const creationTimestamp = Date.now();
+    let uniqueFullDate = `${rawDate}T${rawTime}`;
 
     if (editingSessionId) {
         const originalSession = allSessionsDB.find(doc => doc.id === editingSessionId);
@@ -283,17 +300,18 @@ let uniqueFullDate = `${rawDate}T${rawTime}`;
     }
 
     const payload = {
-        
         date: rawDate.split('-').reverse().slice(0,2).join('/'),
         fullDate: uniqueFullDate,
         createdAt: creationTimestamp,
-        hands: finalHands,
+        hands: hands,
         gain: gain,
         currency: currency,          
         cryptoAmount: cryptoAmount,  
         rakeback: rakeback,
         deposit: deposit,
         withdrawal: withdrawal,
+        casino: casino,             // NOUVEAU
+        casinoGame: casinoGame,     // NOUVEAU
         stake: stake,
         room: room,
         ownerEmail: auth.currentUser.email 
@@ -314,6 +332,7 @@ let uniqueFullDate = `${rawDate}T${rawTime}`;
 }
 
 function resetFormAfterSubmit() {
+    // On vide uniquement les champs de saisie des valeurs
     document.getElementById('input-hands').value = ''; 
     document.getElementById('input-amount').value = '';
     document.getElementById('input-crypto').value = '';
@@ -327,7 +346,8 @@ function resetFormAfterSubmit() {
         btnAdd.style.boxShadow = "";
     }
     
-    // On ne réinitialise plus la date/heure pour faciliter la saisie multiple à la chaîne
+    // ON NE TOUCHE PAS À LA DATE NI À L'HEURE !
+    // Comme ça, si tu rentres une session d'hier, le formulaire reste calé sur hier pour la suivante.
 }
 
 function deleteSession(id) {
@@ -341,18 +361,7 @@ function deleteSession(id) {
     }
 }
 
-function resetData() {
-    if(!auth.currentUser) return;
-    if(confirm("Es-tu sûr de vouloir supprimer TOUT TON historique ?")) {
-        const myEmail = auth.currentUser.email;
-        db.collection("sessions").get().then((q) => {
-            q.forEach((doc) => {
-                const owner = doc.data().ownerEmail || ADMIN_EMAIL;
-                if (owner === myEmail) doc.ref.delete();
-            });
-        });
-    }
-}
+
 
 // --- 5. LOGIQUE D'AFFICHAGE ---
 function updateUI() {
@@ -371,13 +380,18 @@ function updateUI() {
     const roomFilterValue = roomFilterElem ? roomFilterElem.value : "ALL";
     const isGlobalView = (filterValue === "ALL" && roomFilterValue === "ALL");
 
-    let defaultStart, defaultGoal;
+    // --- SYNCHRONISATION DU FORMULAIRE D'AJOUT ---
+    const inputStake = document.getElementById('input-stake');
+    if (inputStake && filterValue !== "ALL") {
+        inputStake.value = filterValue;
+    }
+
+    let defaultStart = 0, defaultGoal = 2500;
     if (currentViewEmail === GUEST_EMAIL) {
         if (filterValue === "NL20") { defaultStart = 0; defaultGoal = 2500; }
         else if (filterValue === "NL10") { defaultStart = 0; defaultGoal = 1000; }
         else if (filterValue === "NL5") { defaultStart = 0; defaultGoal = 500; }
         else if (filterValue === "NL2") { defaultStart = 0; defaultGoal = 100; }
-        else { defaultStart = 0; defaultGoal = 2500; }
     } else {
         if (filterValue === "NL20") { defaultStart = 1000; defaultGoal = 2500; }
         else if (filterValue === "NL10") { defaultStart = 500; defaultGoal = 1000; }
@@ -397,34 +411,44 @@ function updateUI() {
     const isLookingAtOwnStats = user && (user.email === currentViewEmail);
 
     const entryForm = document.querySelector('.entry-form');
-    const resetBtn = document.querySelector('.btn-reset');
+
     
     if (entryForm) entryForm.style.display = isLookingAtOwnStats ? 'flex' : 'none';
-    if (resetBtn) resetBtn.style.display = isLookingAtOwnStats ? 'block' : 'none';
-
-    //
-let filteredSessions = getTargetUserSessions().filter(s => {
-    let matchStake = (filterValue === "ALL") || ((s.stake || "NL10") === filterValue);
-    let matchRoom = (roomFilterValue === "ALL") || ((s.room || "stake") === roomFilterValue);
-    return matchStake && matchRoom;
-});
-
-// AJOUTEZ CE TRI ICI :
-// On trie d'abord par date/heure, puis par timestamp de création pour départager les doublons
-filteredSessions.sort((a, b) => {
-    if (a.fullDate !== b.fullDate) {
-        return a.fullDate.localeCompare(b.fullDate);
-    }
-    return (a.createdAt || 0) - (b.createdAt || 0);
-});
-    let handsLabels = [0]; let profitsNet = [0];  
-    let totalHands = 0; let currentProfitNet = 0; let winningSessions = 0;
-    let totalBB = 0; let totalRakeback = 0; let totalDeposit = 0; let totalWithdrawal = 0;
     
+
+    let filteredSessions = getTargetUserSessions().filter(s => {
+        let matchStake = (filterValue === "ALL") || ((s.stake || "NL10") === filterValue);
+        let matchRoom = (roomFilterValue === "ALL") || ((s.room || "stake") === roomFilterValue);
+        return matchStake && matchRoom;
+    });
+
+    filteredSessions.sort((a, b) => {
+        if (a.fullDate !== b.fullDate) return a.fullDate.localeCompare(b.fullDate);
+        return (a.createdAt || 0) - (b.createdAt || 0);
+    });
+
+    // --- VARIABLES DE BANKROLL EXACTE (ALL-TIME) ---
+    let totalPokerOnly = 0;
+    let totalCasinoOnly = 0;
+    let absoluteProfitNet = 0;
+    let totalDeposit = 0;
+    let totalWithdrawal = 0;
+    let totalRakebackAllTime = 0;
+    let totalCasinoAllTime = 0;
+
+    let rows = [];
+
+    // --- VARIABLES D'AFFICHAGE (Global ou Mensuel) ---
+    let displayHands = 0, displayProfit = 0, displayBB = 0, displayRakeback = 0;
+    let displayWinSessions = 0, displayTotalSessions = 0;
     let bestGain = -Infinity, worstGain = Infinity;
     let bestSession = null, worstSession = null;
 
-    let rows = [];
+    const targetYear = currentCalDate.getFullYear();
+    const targetMonth = currentCalDate.getMonth();
+
+    let dailyAgg = {}; // Pour le lissage Global
+    let chartAgg = []; // Pour le point par point Mensuel
 
     filteredSessions.forEach((s) => { 
         const sHands = parseInt(s.hands) || 0;
@@ -432,70 +456,124 @@ filteredSessions.sort((a, b) => {
         const sRakeback = parseFloat(s.rakeback) || 0;
         const sDeposit = parseFloat(s.deposit) || 0;
         const sWithdrawal = parseFloat(s.withdrawal) || 0;
+        const sCasino = parseFloat(s.casino) || 0;
+       // Ajoute ces deux lignes ici :
+        totalPokerOnly += (sGain + sRakeback);
+totalCasinoOnly += sCasino; 
 
-        totalHands += sHands; 
-        currentProfitNet += sGain;
-        totalRakeback += sRakeback;
+        // 1. Bankroll All-Time (Toujours calculé)
+        absoluteProfitNet += sGain;
         totalDeposit += sDeposit;
         totalWithdrawal += sWithdrawal;
-        
-        if (sGain > 0) winningSessions++;
-        
-        if (!(sHands === 0 && sGain === 0)) {
-            if (sGain > bestGain) { bestGain = sGain; bestSession = s; }
-            if (sGain < worstGain) { worstGain = sGain; worstSession = s; }
-        }
+        totalRakebackAllTime += sRakeback;
+        totalCasinoAllTime += sCasino;
 
-        if (sHands > 0 || sGain !== 0 || (!sRakeback && !sDeposit && !sWithdrawal)) {
-            handsLabels.push(totalHands);
-            profitsNet.push(parseFloat(currentProfitNet.toFixed(2)));
-        }
-
+        // 2. Lignes du tableau (Toujours affichées)
         const sessionStake = s.stake || "NL10";
-        const bbValue = (sessionStake === "NL2") ? 0.02 : (sessionStake === "NL5") ? 0.05 : (sessionStake === "NL20") ? 0.20 : 0.10;
-        const gainBB = sGain / bbValue;
-        if (sHands > 0) totalBB += gainBB;
-
         const currentRoom = s.room || 'stake';
         const roomIcon = currentRoom === 'coinpoker' ? '🪙' : '🎲';
+        // Remplace ta ligne actuelle par celle-ci pour sécuriser le calcul
+const bbValue = (sessionStake === "NL2") ? 0.02 : (sessionStake === "NL5") ? 0.05 : (sessionStake === "NL20") ? 0.20 : 0.10;
+const gainBB = (bbValue > 0) ? (sGain / bbValue) : 0; // Sécurité : si bbValue est 0, on met 0
         const rakebackBadge = (isGlobalView && sRakeback > 0 && sHands > 0) ? `<span style="color:#a78bfa; font-size:0.8em; display:block;">+${sRakeback.toFixed(2)} ${USDC_LOGO} RB</span>` : '';
+        let cryptoBadge = ""; // ... (ton code crypto reste le même)
 
-        let cryptoBadge = "";
-        if (s.currency === "BTC" && s.cryptoAmount) {
-            cryptoBadge = `<br><span style="font-size:0.75rem; color:#aaa; font-weight:600;">${s.cryptoAmount > 0 ? '+' : ''}${s.cryptoAmount} BTC</span>`;
-        } else if (s.currency === "EUR" && s.cryptoAmount) {
-            cryptoBadge = `<br><span style="font-size:0.75rem; color:#aaa; font-weight:600;">${s.cryptoAmount > 0 ? '+' : ''}${s.cryptoAmount} EUR</span>`;
-        } else if (s.currency === "SOL" && s.cryptoAmount) {
-            cryptoBadge = `<br><span style="font-size:0.75rem; color:#aaa; font-weight:600;">${s.cryptoAmount > 0 ? '+' : ''}${s.cryptoAmount} SOL</span>`;
-        }
-
-        let sessionTime = "";
-        if (s.fullDate && s.fullDate.includes('T')) {
-            sessionTime = s.fullDate.split('T')[1].substring(0, 5).replace(':', 'h');
-        }
-
+        let sessionTime = s.fullDate && s.fullDate.includes('T') ? s.fullDate.split('T')[1].substring(0, 5).replace(':', 'h') : "";
         const actionButtons = isLookingAtOwnStats ? 
-            `<button onclick="editSession('${s.id}')" title="Modifier" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b; border-radius: 6px; padding: 4px 7px; cursor: pointer; transition: 0.2s; margin-right: 5px;">✏️</button>` +
-            `<button class="btn-delete" onclick="deleteSession('${s.id}')" style="padding: 4px 7px;" title="Supprimer">✕</button>` : '';
+    `<button onclick="editSession('${s.id}')" title="Modifier" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b; border-radius: 6px; padding: 4px 7px; cursor: pointer; transition: 0.2s; margin-right: 5px;">✏️</button>` +
+    `<button class="btn-delete" onclick="deleteSession('${s.id}')" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.3); color: #3b82f6; padding: 4px 7px; border-radius: 6px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#ff5555'; this.style.borderColor='#ff5555'; this.style.color='white';" onmouseout="this.style.background='rgba(59, 130, 246, 0.05)'; this.style.borderColor='rgba(59, 130, 246, 0.3)'; this.style.color='#3b82f6';" title="Supprimer">✕</button>` : '';
 
+        // AFFICHAGE TABLEAU (SÉCURISÉ)
         if (sDeposit > 0) {
-            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#4ade80;">DÉPÔT</small></td><td style="color: #888;">—</td><td style="color: #4ade80; font-weight: 700;">+${sDeposit.toFixed(2)}${USDC_LOGO}</td><td style="color: #888;">—</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
-        } else if (sWithdrawal > 0) {
-            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#ff5555;">RETRAIT</small></td><td style="color: #888;">—</td><td style="color: #ff5555; font-weight: 700;">-${sWithdrawal.toFixed(2)}${USDC_LOGO}</td><td style="color: #888;">—</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
-        } else if (sRakeback > 0 && sGain === 0 && sHands === 0) {
+            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#4ade80;">DÉPÔT</small></td><td>—</td><td style="color: #4ade80; font-weight: 700;">+${sDeposit.toFixed(2)}${USDC_LOGO}</td><td>—</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
+        } 
+        else if (sWithdrawal > 0) {
+            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#ff5555;">RETRAIT</small></td><td>—</td><td style="color: #ff5555; font-weight: 700;">-${sWithdrawal.toFixed(2)}${USDC_LOGO}</td><td>—</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
+        } 
+        else if (sRakeback > 0 && sGain === 0 && sHands === 0) {
+            if (isGlobalView) rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#a78bfa;">RAKEBACK</small></td><td>—</td><td style="color: #a78bfa; font-weight: 700;">+${sRakeback.toFixed(2)}${USDC_LOGO}</td><td>—</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
+        } 
+        else if (sCasino !== 0) {
+            const cColor = sCasino >= 0 ? '#f59e0b' : '#ff5555';
+            const cSign = sCasino > 0 ? '+' : '';
+            const gameName = s.casinoGame || 'CASINO';
             if (isGlobalView) {
-                rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#a78bfa;">RAKEBACK</small></td><td style="color: #888;">—</td><td style="color: #a78bfa; font-weight: 700;">+${sRakeback.toFixed(2)}${USDC_LOGO}</td><td style="color: #888;">—</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
+                rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:700; color:#f59e0b;">🎰 ${gameName.toUpperCase()}</small></td><td>—</td><td style="color: ${cColor}; font-weight: 700;">${cSign}${sCasino.toFixed(2)}${USDC_LOGO}</td><td>—</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
             }
-        } else {
-            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:400; color:#3b82f6;">${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span></small></td><td style="font-weight: 400;">${sHands.toLocaleString()}</td><td style="color: ${sGain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${sGain.toFixed(2)}${USDC_LOGO}${rakebackBadge}${cryptoBadge}</td><td style="color: ${gainBB >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${gainBB.toFixed(1)} BB</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
+        } 
+        else {
+            rows.push(`<tr><td style="color: #888; font-weight: 400;">${s.date} <span style="font-size:0.65rem; color:#888;">${sessionTime}</span><br><small style="font-weight:400; color:#3b82f6;">${sessionStake} <span style="margin-left: 5px; color: #fff; font-size: 1.1em;">${roomIcon}</span></small></td><td>${sHands.toLocaleString()}</td><td style="color: ${sGain >= 0 ? '#4ade80' : '#ff5555'}; font-weight: 400;">${sGain.toFixed(2)}${USDC_LOGO}${rakebackBadge}${cryptoBadge}</td><td>${gainBB.toFixed(1)} BB</td><td style="white-space: nowrap;">${actionButtons}</td></tr>`);
+        }
+
+        // 3. STATS & GRAPHIQUE (UNIQUEMENT POKER)
+        const dateParts = s.fullDate ? s.fullDate.split('T')[0].split('-') : ["2000", "01", "01"];
+        const sYear = parseInt(dateParts[0]);
+        const sMonth = parseInt(dateParts[1]) - 1;
+        const isTargeted = isGlobalView ? true : (sYear === targetYear && sMonth === targetMonth);
+
+        // NOUVEAU : On ajoute (sCasino === 0) pour ignorer le Casino dans les stats Poker
+        if (isTargeted && (sHands > 0 || sGain !== 0) && sCasino === 0) {
+            displayHands += sHands;
+            displayProfit += sGain;
+            displayRakeback += sRakeback;
+
+            if (sGain > 0) displayWinSessions++;
+            if (sHands > 0 || sGain !== 0) displayTotalSessions++;
+            if (sHands > 0) displayBB += gainBB;
+
+            if (!(sHands === 0 && sGain === 0)) {
+                if (sGain > bestGain) { bestGain = sGain; bestSession = s; }
+                if (sGain < worstGain) { worstGain = sGain; worstSession = s; }
+            }
+
+            // Gestion du Graphique (Poker uniquement)
+            if (isGlobalView) {
+                const dateDay = s.fullDate.split('T')[0];
+                if (!dailyAgg[dateDay]) dailyAgg[dateDay] = { gain: 0, hands: 0 };
+                dailyAgg[dateDay].gain += sGain;
+                dailyAgg[dateDay].hands += sHands;
+            } else {
+                chartAgg.push({ gain: sGain, hands: sHands });
+            }
         }
     });
 
     if(document.getElementById('history-list')) document.getElementById('history-list').innerHTML = rows.reverse().join('');
 
-    const profitDepuisStart = currentProfitNet + (isGlobalView ? totalRakeback : 0);
-    const profitColor = profitDepuisStart >= 0 ? '#4ade80' : '#ff5555';
-    const profitSign = profitDepuisStart > 0 ? '+' : '';
+    // --- CONSTRUCTION DE LA COURBE ---
+    let finalHandsLabels = [0]; 
+    let finalProfitsNet = [0];
+    let cumulativeHands = 0;
+    let cumulativeProfit = 0;
+
+    if (isGlobalView) {
+        Object.keys(dailyAgg).sort().forEach(dateDay => {
+            cumulativeHands += dailyAgg[dateDay].hands;
+            cumulativeProfit += dailyAgg[dateDay].gain;
+            finalHandsLabels.push(cumulativeHands);
+            finalProfitsNet.push(parseFloat(cumulativeProfit.toFixed(2)));
+        });
+    } else {
+        chartAgg.forEach(point => {
+            cumulativeHands += point.hands;
+            cumulativeProfit += point.gain;
+            finalHandsLabels.push(cumulativeHands);
+            finalProfitsNet.push(parseFloat(cumulativeProfit.toFixed(2)));
+        });
+    }
+
+    // --- MISE À JOUR VISUELLE ---
+    const absoluteProfitDepuisStart = absoluteProfitNet + (isGlobalView ? totalRakebackAllTime + totalCasinoAllTime : 0);
+    const brElem = document.getElementById('total-br');
+    if(brElem) {
+        const newBr = startBR + absoluteProfitDepuisStart + totalDeposit - totalWithdrawal;
+        if (previousBr === 0) animateValue('total-br', startBR, newBr, 1500); else animateValue('total-br', previousBr, newBr, 1000); 
+        previousBr = newBr; 
+    }
+
+    const titleText = isGlobalView ? "📈 Profit Global" : "📅 PNL du mois";
+    const profitColor = displayProfit >= 0 ? '#4ade80' : '#ff5555';
+    const profitSign = displayProfit > 0 ? '+' : '';
 
     const xpTitle = document.getElementById('xp-title-text');
     if(xpTitle) {
@@ -504,12 +582,12 @@ filteredSessions.sort((a, b) => {
                 🏁 Départ ${startBR} ${USDC_LOGO} <span class="xp-arrow" style="margin:0 5px;">➔</span> 🎯 Objectif ${goalBR} ${USDC_LOGO} <span style="font-size:0.85rem; opacity:0.8; margin-left:5px;">⚙️</span>
             </span>
             <span style="margin-left: 15px; padding-left: 15px; border-left: 2px solid #333; color: ${profitColor}; font-weight: 800; text-shadow: 0 0 10px ${profitColor.replace(')', ', 0.3)').replace('rgb', 'rgba')};">
-                📈 Profit : ${profitSign}${profitDepuisStart.toFixed(2)} ${USDC_LOGO}
+                ${titleText} : ${profitSign}${displayProfit.toFixed(2)} ${USDC_LOGO}
             </span>
         `;
     }
 
-    if (filteredSessions.length > 0 && bestSession && worstSession) {
+    if (displayTotalSessions > 0 && bestSession && worstSession) {
         if (document.getElementById('best-session-gain')) document.getElementById('best-session-gain').innerHTML = `+${bestSession.gain.toFixed(2)} ${USDC_LOGO}`;
         if (document.getElementById('best-session-date')) document.getElementById('best-session-date').innerText = `le ${bestSession.date} (${bestSession.stake || "NL10"})`;
         if (document.getElementById('worst-session-gain')) document.getElementById('worst-session-gain').innerHTML = `${worstSession.gain.toFixed(2)} ${USDC_LOGO}`;
@@ -521,33 +599,42 @@ filteredSessions.sort((a, b) => {
         if (document.getElementById('worst-session-date')) document.getElementById('worst-session-date').innerText = "--/--";
     }
 
-    const brElem = document.getElementById('total-br');
-    if(brElem) {
-        const newBr = startBR + profitDepuisStart + totalDeposit - totalWithdrawal;
-        if (previousBr === 0) animateValue('total-br', startBR, newBr, 1500); else animateValue('total-br', previousBr, newBr, 1000); 
-        previousBr = newBr; 
-    }
-
-    if(document.getElementById('total-rakeback')) {
-        document.getElementById('total-rakeback').innerHTML = "+" + totalRakeback.toFixed(2) + " " + USDC_LOGO;
-        document.getElementById('total-rakeback').style.color = totalRakeback > 0 ? '#a78bfa' : '#9ca3af';
-    }
-    if(document.getElementById('rakeback-card')) document.getElementById('rakeback-card').style.display = isGlobalView ? '' : 'none';
-    if(document.getElementById('total-volume')) document.getElementById('total-volume').innerText = totalHands.toLocaleString();
+    if(document.getElementById('total-volume')) document.getElementById('total-volume').innerText = displayHands.toLocaleString();
     
-    let winrate = totalHands > 0 ? totalBB / (totalHands / 100) : 0;
+    let winrate = displayHands > 0 ? displayBB / (displayHands / 100) : 0;
     if(document.getElementById('winrate')) {
         document.getElementById('winrate').innerText = (winrate >= 0 ? '+' : '') + winrate.toFixed(2) + " bb/100";
         document.getElementById('winrate').style.color = winrate >= 0 ? '#4ade80' : '#ff5555';
     }
-    if(document.getElementById('success-rate')) document.getElementById('success-rate').innerText = (filteredSessions.length > 0 ? (winningSessions / filteredSessions.length) * 100 : 0).toFixed(1) + "%";
+    if(document.getElementById('success-rate')) {
+        document.getElementById('success-rate').innerText = (displayTotalSessions > 0 ? (displayWinSessions / displayTotalSessions) * 100 : 0).toFixed(1) + "%";
+    }
+
+    if(document.getElementById('total-rakeback')) {
+        document.getElementById('total-rakeback').innerHTML = "+" + displayRakeback.toFixed(2) + " " + USDC_LOGO;
+        document.getElementById('total-rakeback').style.color = displayRakeback > 0 ? '#a78bfa' : '#9ca3af';
+    }
+    if(document.getElementById('rakeback-card')) document.getElementById('rakeback-card').style.display = isGlobalView ? '' : 'none';
     
-    let prog = (profitDepuisStart / (goalBR - startBR)) * 100;
+    let prog = (absoluteProfitDepuisStart / (goalBR - startBR)) * 100;
     if(document.getElementById('br-progression-text')) document.getElementById('br-progression-text').innerText = Math.min(100, Math.max(0, prog)).toFixed(1) + "%";
     if(document.getElementById('progress-bar-fill')) document.getElementById('progress-bar-fill').style.width = Math.min(100, Math.max(0, prog)) + "%";
 
+    // Mise à jour de la carte Casino
+    const casinoDisplay = document.getElementById('total-casino-display');
+    if (casinoDisplay) {
+        casinoDisplay.innerText = (totalCasinoAllTime >= 0 ? '+' : '') + totalCasinoAllTime.toFixed(2) + " USDC";
+        casinoDisplay.style.color = totalCasinoAllTime >= 0 ? '#4ade80' : '#ff5555';
+    }
+    const detailsDiv = document.getElementById('details-bankroll');
+    if (detailsDiv) {
+    detailsDiv.style.display = isGlobalView ? 'block' : 'none';
+    document.getElementById('poker-only-pnl').innerText = totalPokerOnly.toFixed(2);
+    document.getElementById('casino-only-pnl').innerText = totalCasinoOnly.toFixed(2);
+}
+
     renderCalendar(filteredSessions);
-    renderChart(handsLabels, profitsNet, filterValue);
+    renderChart(finalHandsLabels, finalProfitsNet, filterValue);
 }
 
 // --- 🛑 FONCTION DE PARTAGE 🛑 ---
@@ -835,24 +922,7 @@ function toggleHistoryFlip() {
 
 window.changeCalMonth = function(offset) {
     currentCalDate.setMonth(currentCalDate.getMonth() + offset);
-    
-    const filterElem = document.getElementById('global-filter');
-    const filterValue = filterElem ? filterElem.value : "ALL";
-
-    const roomFilterElem = document.getElementById('room-filter');
-    const roomFilterValue = roomFilterElem ? roomFilterElem.value : "ALL";
-
-    let filteredSessions = getTargetUserSessions().filter(s => {
-        const sessionStake = s.stake || "NL10";
-        const sessionRoom = s.room || "stake";
-
-        let matchStake = (filterValue === "ALL") || (sessionStake === filterValue);
-        let matchRoom = (roomFilterValue === "ALL") || (sessionRoom === roomFilterValue);
-
-        return matchStake && matchRoom;
-    });
-
-    renderCalendar(filteredSessions);
+    updateUI(); 
 };
 
 function renderCalendar(filteredSessions) {
@@ -1335,7 +1405,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputTime) inputTime.addEventListener('input', () => dateEdited = true);
     
     setTodayDate();
-    setInterval(setTodayDate, 30000); 
 });
 
 // Charge Tesseract via CDN au préalable dans index.html
@@ -1367,3 +1436,24 @@ function filterTableList() {
     });
 }
 
+// Force la Vue Globale au rechargement de la page pour vider le cache
+window.addEventListener('load', () => {
+    const globalFilter = document.getElementById('global-filter');
+    const roomFilter = document.getElementById('room-filter');
+    
+    let needsUpdate = false;
+    
+    if (globalFilter && globalFilter.value !== "ALL") {
+        globalFilter.value = "ALL";
+        needsUpdate = true;
+    }
+    if (roomFilter && roomFilter.value !== "ALL") {
+        roomFilter.value = "ALL";
+        needsUpdate = true;
+    }
+    
+    // On force la mise à jour visuelle si le navigateur avait gardé une limite en mémoire
+    if (needsUpdate && typeof updateUI === 'function') {
+        updateUI();
+    }
+});
